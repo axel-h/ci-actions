@@ -34,6 +34,10 @@ inputs:
     required: false
     default: 'sel4test-sim'
 
+# To speed up things a bit, a pre-built docker container is used instead of
+# building it from the dockerfile everytime. When working on the workflows,
+# the line must be changed to "image: 'Dockerfile'" to build the container and
+# copy all files in the container.
 runs:
   using: 'docker'
   image: 'Dockerfile'
