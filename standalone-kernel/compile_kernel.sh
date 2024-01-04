@@ -40,15 +40,19 @@ case "${INPUT_ARCH}" in
 esac
 
 toolchain_flags=""
+toolchain_file="${INPUT_COMPILER}.cmake"
 case "${INPUT_COMPILER}" in
     gcc)
         if [ ! -z "${gcc_cfg}" ]; then
             toolchain_flags="-D${gcc_cfg}=TRUE"
         fi
         ;;
-    llvm)
+    clang|llvm)
         if [ ! -z "${llvm_triple}" ]; then
             toolchain_flags="-DTRIPLE=${llvm_triple}"
+        fi
+        if [ "${INPUT_COMPILER}" == "clang" ]; then
+            toolchain_file="llvm.cmake"
         fi
         ;;
     *)
@@ -56,7 +60,7 @@ case "${INPUT_COMPILER}" in
         exit 1
         ;;
 esac
-toolchain_flags="-DCMAKE_TOOLCHAIN_FILE=${INPUT_COMPILER}.cmake ${toolchain_flags}"
+toolchain_flags="-DCMAKE_TOOLCHAIN_FILE=${toolchain_file} ${toolchain_flags}"
 
 do_compile_kernel()
 {
