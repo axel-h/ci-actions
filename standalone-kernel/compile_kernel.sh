@@ -7,6 +7,8 @@
 
 echo "Arch: $INPUT_ARCH"
 echo "Comp: $INPUT_COMPILER"
+echo "MCS: $INPUT_MCS"
+echo "HYP: $INPUT_HYP"
 
 set -eu
 
@@ -62,61 +64,104 @@ case "${INPUT_COMPILER}" in
 esac
 toolchain_flags="-DCMAKE_TOOLCHAIN_FILE=${toolchain_file} ${toolchain_flags}"
 
-do_compile_kernel()
-{
-    variant=${1:-}
+config_file="configs/${INPUT_ARCH}_verified.cmake"
+build_folder=build
+flags=""
+variant=""
 
-    build_folder="build"
-    config_file="configs/${INPUT_ARCH}_verified.cmake"
-    variant_info=""
-    extra_params=""
+case "${INPUT_MCS}" in
+    true)
+        if [ ! -z "${variant}" ]; then
+            variant="${variant}-"
+        fi
+        variant="${variant}MCS"
+        # Use a dedicated config file if available, otherwise just use the
+        # default config and enable MCS.
+        try_config_file="configs/${INPUT_ARCH}_MCS_verified.cmake"
+        if [ -f "${try_config_file}" ]; then
+            config_file="${try_config_file}"
+        else
+            flags="${flags} KernelIsMCS"
+        fi
+        ;;
+    false)
+        # nothing
+        ;;
+    *)
+        echo "Unknown INPUT_MCS '${INPUT_MCS}'"
+        exit 1
+esac
 
-    if [ ! -z "${variant}" ]; then
-        case "${variant}" in
-            MCS)
-                build_folder="${build_folder}-${variant}"
-                variant_info=" (${variant})"
-                # Use a dedicated config file if available, otherwise just use
-                # the default config and enable MCS.
-                try_config_file="configs/${INPUT_ARCH}_MCS_verified.cmake"
-                if [ -f "${try_config_file}" ]; then
-                    config_file=${try_config_file}
-                else
-                    extra_params="${extra_params} -DKernelIsMCS=TRUE"
-                fi
+case "${INPUT_HYP}" in
+    true)
+        if [ ! -z "${variant}" ]; then
+            variant="${variant}-"
+        fi
+       variant="${variant}HYP"
+
+        case "${INPUT_ARCH}" in
+            ARM_HYP)
+                # implicit
                 ;;
-            *)
-                echo "Unknown variant '${variant}'"
+            ARM|AARCH64)
+                flags="${flags} KernelArmHypervisorSupport"
+                ;;
+            RISCV32|RISCV64)
+                # ToDo: do we have KernelRiscvHypervisorSupport ?
+                echo "HYP is not supported on RISCV"
                 exit 1
                 ;;
+            X64)
+                flags="${flags} KernelVTX"
+                ;;
+            IA32)
+                echo "HYP is not supported on IA32"
+                exit 1
+                ;;
+            *)
+                echo "Unknown INPUT_ARCH for HYP: '${INPUT_ARCH}'"
+                exit 1
         esac
-    fi
-
-    # Unfortunately, CMake does not halt with a nice and clear error if the
-    # config file does not exist. Instead, it logs an error that it could not
-    # process the file and continues as if the file was empty. This causes some
-    # rather odd errors then, so it's better to fail here with a clear message.
-    if [ ! -f "${config_file}" ]; then
-        echo "missing config file '${config_file}'"
+        ;;
+    false)
+        # nothing
+        ;;
+    *)
+        echo "Unknown INPUT_HYP '${INPUT_HYP}'"
         exit 1
-    fi
+esac
 
-    echo "::group::Run CMake${variant_info}"
-    ( # run in sub shell
-        set -x
-        cmake -G Ninja -B ${build_folder} -C ${config_file} ${toolchain_flags} ${extra_params}
-    )
-    echo "::endgroup::"
+# add all flags
+extra_params=""
+for flag in ${flags}; do
+    extra_params="${extra_params} -D${flag}=TRUE"
+done
 
-    echo "::group::Run Ninja${variant_info}"
-    ( # run in sub shell
-        set -x
-        ninja -C ${build_folder} kernel.elf
-    )
-    echo "::endgroup::"
-}
+# Unfortunately, CMake does not halt with a nice and clear error if the config
+# file does not exist. Instead, it logs an error that it could not process the
+# file and continues as if the file was empty. This causes some rather odd
+# errors later, so it's better to fail here with a clear message.
+if [ ! -f "${config_file}" ]; then
+    echo "missing config file '${config_file}'"
+    exit 1
+fi
 
-# build standard kernel
-do_compile_kernel
-# build MCS kernel
-do_compile_kernel "MCS"
+variant_info=""
+if [ ! -z "${variant}" ]; then
+    variant_info=" (${variant})"
+    build_folder="${build_folder}-${variant}"
+fi
+
+echo "::group::Run CMake${variant_info}"
+( # run in sub shell
+    set -x
+    cmake -G Ninja -B ${build_folder} -C ${config_file} ${toolchain_flags} ${extra_params}
+)
+echo "::endgroup::"
+
+echo "::group::Run Ninja${variant_info}"
+( # run in sub shell
+    set -x
+    ninja -C ${build_folder} kernel.elf
+)
+echo "::endgroup::"
