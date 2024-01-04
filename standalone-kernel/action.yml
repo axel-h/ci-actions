@@ -14,7 +14,7 @@ inputs:
     required: true
 
   COMPILER:
-    description: 'Which compiler suite to use. One of gcc, llvm'
+    description: 'Which compiler suite to use. One of gcc, clang, llvm'
     required: true
 
 runs:
