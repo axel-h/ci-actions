@@ -10,12 +10,22 @@ author: Luke Mondy <luke.mondy@data61.csiro.au>
 
 inputs:
   ARCH:
-    description: 'Architecture to test. One of ARM, ARM_HYP, AARCH64, RISCV64, X64'
+    description: 'Architecture to test. One of AARCH32, ARM_HYP, AARCH64, RISCV32, RISCV64, IA32, X64'
     required: true
 
   COMPILER:
     description: 'Which compiler suite to use. One of gcc/clang, llvm'
     required: true
+
+  MCS:
+    description: 'Use MCS'
+    required: false
+    default: false
+
+  HYP:
+    description: 'Build as Hypervisor'
+    required: false
+    default: false
 
 runs:
   using: 'docker'
