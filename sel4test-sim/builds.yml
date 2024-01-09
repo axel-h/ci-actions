@@ -39,14 +39,8 @@ variants:
 build-filter:
     - has_simulation: true
       domains: ''
-      arch: [arm, x86]
     - has_simulation: true
       domains: DOM
-      debug: [debug]
-      arch: [arm, x86]
-    - has_simulation: true
-      arch: [riscv]
-      # Bamboo has no "release" simulation for RISCV, and it doesn't seem to work either:
       debug: [debug]
 
 
