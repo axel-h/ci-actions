@@ -50,52 +50,50 @@ def hw_run(manifest_dir: str, build: builds.Build) -> int:
 
 
 def build_filter(build: builds.Build) -> bool:
+
+    # run NUM_DOMAINS > 1 tests only on release builds
+    if build.is_domains() and not build.is_release():
+        return False
+
     plat = build.get_platform()
 
     if plat.no_hw_build:
         return False
 
-    if plat.arch == 'arm':
-        # ToDo: why is release for hikey in aarch64 arm_hyp mode is not supported
-        if build.is_hyp() and build.get_mode() == 64 and build.is_release() and \
-           plat.name == 'HIKEY':
-            return False
+    # ToDo: explant why we don't do VTX for SMP or verification
+    if plat.arch == 'x86' and build.is_hyp() and (build.is_smp() or build.is_verification()):
+        return False
 
-        # MCS exclusions:
-        # No MCS + SMP for platforms with global timer for now (see seL4/seL4#513)
-        if plat.name == 'SABRE' and build.is_smp() and build.is_mcs():
-            return False
-        # SCHED_CONTEXT_0014 fails on TX1, TX2 and ODROID_C4: https://github.com/seL4/seL4/issues/928
-        if plat.name in ['TX1', 'TX2', 'ODROID_C4'] and \
-           build.is_mcs() and build.is_smp() and build.is_hyp() and build.is_clang():
-            return False
-        # CACHEFLUSH0001 fails on ODROID_XU4: https://github.com/seL4/sel4test/issues/80
-        if plat.name == 'ODROID_XU4' and build.is_debug() and build.is_mcs() and \
-           build.is_hyp() and build.is_clang() and build.get_mode() == 32:
-            return False
-        # IMX8MM_EVK is failing multicore tests for MCS + SMP:
-        if plat.name == 'IMX8MM_EVK' and build.is_mcs() and build.is_smp():
-            return False
+    # ToDo: why is release for hikey in aarch64 arm_hyp mode is not supported
+    if plat.name == 'HIKEY' and build.is_hyp() and build.get_mode() == 64 and build.is_release():
+        return False
 
-        # HYP/SMP exclusions:
-        # IMX8MQ_EVK and ZYNQMPs are failing multicore tests for SMP + HYP + clang
-        # see also https://github.com/seL4/sel4test/issues/44
-        if plat.name in ['IMX8MQ_EVK', 'ZYNQMP', 'ZYNQMP106'] and \
-           build.is_hyp() and build.is_smp() and build.is_clang():
-            return False
+    # MCS exclusions:
+    # No MCS + SMP for platforms with global timer (SABRE) for now (see seL4/seL4#513)
+    # IMX8MM_EVK is failing multicore tests for MCS + SMP:
+    if plat.name in ['SABRE', 'IMX8MM_EVK'] and build.is_mcs() and build.is_smp()
 
-    if plat.arch == 'x86':
-        # ToDo: explant why we don't do VTX for SMP or verification
-        if build.is_hyp() and (build.is_smp() or build.is_verification()):
-            return False
 
-    if plat.arch == 'riscv':
-        # see also https://github.com/seL4/seL4/issues/1160
-        if plat.name == 'HIFIVE' and build.is_clang() and build.is_smp() and build.is_release():
-            return False
+    # SCHED_CONTEXT_0014 fails on TX1, TX2 and ODROID_C4: https://github.com/seL4/seL4/issues/928
+    if plat.name in ['TX1', 'TX2', 'ODROID_C4'] and \
+       build.is_mcs() and build.is_smp() and build.is_hyp() and build.is_clang():
+        return False
 
-    # run NUM_DOMAINS > 1 tests only on release builds
-    if build.is_domains() and not build.is_release():
+    # CACHEFLUSH0001 fails on ODROID_XU4: https://github.com/seL4/sel4test/issues/80
+    if plat.name == 'ODROID_XU4' and build.is_debug() and build.is_mcs() and \
+       build.is_hyp() and build.is_clang() and build.get_mode() == 32:
+        return False
+
+    # HYP/SMP exclusions:
+    # IMX8MQ_EVK and ZYNQMPs are failing multicore tests for SMP + HYP + clang
+    # see also https://github.com/seL4/sel4test/issues/44
+    if plat.name in ['IMX8MQ_EVK', 'ZYNQMP', 'ZYNQMP106'] and \
+       build.is_hyp() and build.is_smp() and build.is_clang():
+        return False
+
+    # HIFIVE boot fails on SMP for release build with clang.
+    # see https://github.com/seL4/seL4/issues/1160
+    if plat.name == 'HIFIVE' and build.is_clang() and build.is_smp() and build.is_release():
         return False
 
     return True
