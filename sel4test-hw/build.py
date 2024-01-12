@@ -125,7 +125,7 @@ def gh_output_matrix(param_name: str, builds: list[Build]) -> None:
 
         variants = {"compiler": ["gcc", "clang"]}
         if (plat.arch == 'x86'):
-            variants["mode"] = [32, 64]
+            variants["mode"] = plat.modes
 
         # create builds for all combination from the variants matrix
         for vals in itertools.product(*(variants.values())):
