@@ -4,11 +4,20 @@
 
 # The context for this Dockerfile is the repo root
 
+ARG ACTION=camkes-unit
+ARG SCRIPTS=/ci-scripts
+
 FROM trustworthysystems/camkes:latest
+ARG ACTION
+ARG SCRIPTS
 
-COPY scripts/*.sh camkes-unit/steps.sh /usr/bin/
+WORKDIR ${SCRIPTS}
+COPY scripts/*.sh \
+     ${ACTION}/steps.sh \
+     ./
+RUN chmod a+rx ./*
+ENV PATH="${SCRIPTS}:${PATH}"
 
-RUN mkdir /workspace
 WORKDIR /workspace
 
-ENTRYPOINT steps.sh
+ENTRYPOINT ${SCRIPTS}/steps.sh

@@ -4,24 +4,23 @@
 
 # The context of this Dockerfiles is the repo root (../)
 
-ARG WORKSPACE=/workspace
 ARG SCRIPTS=/ci-scripts
 ARG ACTION=preprocess
 
 FROM trustworthysystems/sel4:latest
+ARG SCRIPTS
+ARG ACTION
 
 COPY --from=sel4/cparser-builder /c-parser /c-parser
 
-ARG ACTION
-ARG SCRIPTS
-RUN mkdir ${SCRIPTS}
-COPY ${ACTION}/steps.sh ${ACTION}/make_munge.sh ${ACTION}/test_munge.sh \
-     scripts/* ${SCRIPTS}/
-RUN chmod a+rx ${SCRIPTS}/*
+WORKDIR ${SCRIPTS}
+COPY ${ACTION}/steps.sh \
+     ${ACTION}/make_munge.sh \
+     ${ACTION}/test_munge.sh \
+     scripts/* ./
+RUN chmod a+rx ./*
 ENV  PATH "${SCRIPTS}:${PATH}"
 
-ARG WORKSPACE
-RUN mkdir -p ${WORKSPACE}
-WORKDIR ${WORKSPACE}
+WORKDIR /workspace
 
-ENTRYPOINT steps.sh
+ENTRYPOINT ${SCRIPTS}/steps.sh

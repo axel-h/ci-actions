@@ -4,9 +4,12 @@
 
 # The context of this Dockerfiles is the repo root (../)
 
-ARG WORKSPACE=/workspace
+ARG SCRIPTS=/ci-scripts
+ARG ACTION=eL4-manual
 
 FROM trustworthysystems/sel4:latest
+ARG SCRIPTS
+ARG ACTION
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -18,15 +21,13 @@ RUN apt-get update \
     && apt-get autoremove --yes \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/
 
-COPY seL4-manual/steps.sh \
-     scripts/checkout.sh \
-     /usr/bin/
+WORKDIR ${SCRIPTS}
+COPY scripts/*.sh \
+     ${ACTION}/steps.sh \
+     ./
+RUN chmod a+rx ./*
+ENV PATH="${SCRIPTS}:${PATH}"
 
-WORKDIR /usr/bin
-RUN chmod a+rx checkout.sh steps.sh
+WORKDIR /workspace
 
-ARG WORKSPACE
-RUN mkdir -p ${WORKSPACE}
-WORKDIR ${WORKSPACE}
-
-ENTRYPOINT steps.sh
+ENTRYPOINT ${SCRIPTS}/steps.sh

@@ -4,11 +4,12 @@
 
 # The context of this Dockerfiles is the repo root (../)
 
-ARG WORKSPACE=/workspace
 ARG SCRIPTS=/ci-scripts
 ARG ACTION=tutorials
 
 FROM trustworthysystems/camkes:latest
+ARG SCRIPTS
+ARG ACTION
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -18,14 +19,14 @@ RUN apt-get update \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/
 RUN pip3 install junitparser PyGithub
 
-ARG ACTION
-ARG SCRIPTS
-RUN mkdir ${SCRIPTS}
-COPY ${ACTION}/steps.sh scripts/* ${SCRIPTS}/
-RUN chmod a+rx ${SCRIPTS}/*
-ENV  PATH "${SCRIPTS}:${PATH}"
+WORKDIR ${SCRIPTS}
+COPY ${ACTION}/steps.sh \
+     scripts/* \
+     ./
+RUN chmod a+rx ./*
+ENV PATH "${SCRIPTS}:${PATH}"
 
-RUN mkdir /builds
+WORKDIR /builds
 COPY ${ACTION}/builds.yml \
      ${ACTION}/build.py \
      seL4-platforms/platforms.yml \
@@ -33,10 +34,9 @@ COPY ${ACTION}/builds.yml \
      seL4-platforms/builds.py \
      /builds/
 
-RUN mkdir -p /github/home
+WORKDIR /github/home
+# nothing added here, just create folder
 
-ARG WORKSPACE
-RUN mkdir -p ${WORKSPACE}
-WORKDIR ${WORKSPACE}
+WORKDIR /workspace
 
-ENTRYPOINT steps.sh
+ENTRYPOINT ${SCRIPTS}/steps.sh
