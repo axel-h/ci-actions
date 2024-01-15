@@ -355,8 +355,7 @@ def gen_web(runs: list[Run], yml, file_name: str):
         f.write('.</p>')
 
 
-# If called as main, run all builds from builds.yml
-if __name__ == '__main__':
+def main(argv: list) -> int:
     yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
     builds = load_builds(None, filter_fun=build_filter, yml=yml)
 
@@ -367,19 +366,24 @@ if __name__ == '__main__':
     more_builds = [Build(b, default_build) for b in yml.get("more_builds", [])]
     builds.extend([b for b in more_builds if b and filtered(b, env_filters)])
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--dump':
+    if len(argv) > 1 and argv[1] == '--dump':
         pprint(builds)
-        sys.exit(0)
+        return 0
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--hw':
-        sys.exit(run_builds(make_runs(builds), hw_run))
+    if len(argv) > 1 and argv[1] == '--hw':
+        return run_builds(make_runs(builds), hw_run)
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--post':
+    if len(argv) > 1 and argv[1] == '--post':
         release_mq_locks(builds)
-        sys.exit(0)
+        return 0
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--web':
+    if len(argv) > 1 and argv[1] == '--web':
         gen_web(make_runs(builds), yml, "index.html")
-        sys.exit(0)
+        return 0
 
-    sys.exit(run_builds(builds, hw_build))
+    # by default, run all builds from builds.yml
+    return run_builds(builds, hw_build)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

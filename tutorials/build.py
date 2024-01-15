@@ -43,18 +43,22 @@ def to_json(builds: list) -> str:
     return "matrix=" + json.dumps(matrix)
 
 
-# If called as main, run all builds from builds.yml
-if __name__ == '__main__':
+def main(argv: list) -> int:
     yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
     disable_app_for = yml['disable_app_for']
-
     builds = load_builds(None, build_filter, yml)
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--dump':
+    if len(argv) > 1 and argv[1] == '--dump':
         pprint(builds)
-        sys.exit(0)
-    elif len(sys.argv) > 1 and sys.argv[1] == '--matrix':
-        gh_output(to_json(builds))
-        sys.exit(0)
+        return 0
 
-    sys.exit(run_builds(builds, run_simulation))
+    if len(argv) > 1 and argv[1] == '--matrix':
+        gh_output(to_json(builds))
+        return 0
+
+    # by default, run all builds from builds.yml
+    return run_builds(builds, run_simulation)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
