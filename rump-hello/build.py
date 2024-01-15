@@ -56,19 +56,23 @@ def hw_run(manifest_dir: str, build: Build) -> int:
     return run_build_script(manifest_dir, build, script, final_script=final)
 
 
-# If called as main, run all builds from builds.yml
-if __name__ == '__main__':
+def main(argv: list) -> int:
     builds = load_builds(os.path.dirname(__file__) + "/builds.yml")
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--dump':
+    if len(argv) > 1 and argv[1] == '--dump':
         pprint(builds)
-        sys.exit(0)
+        return 0
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--hw':
-        sys.exit(run_builds(builds, hw_run))
+    if len(argv) > 1 and argv[1] == '--hw':
+        return run_builds(builds, hw_run)
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--post':
+    if len(argv) > 1 and argv[1] == '--post':
         release_mq_locks(builds)
-        sys.exit(0)
+        return 0
 
-    sys.exit(run_builds(builds, run_build))
+    # by default, run all builds from builds.yml
+    return run_builds(builds, run_build)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

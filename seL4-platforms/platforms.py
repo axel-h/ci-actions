@@ -228,8 +228,9 @@ for p in mcs_unsupported:
     if not platforms.get(p):
         print(f"Warning: unknown platform '{p}' in mcs_unsupported list")
 
+
 # if called as main, dump info:
-if __name__ == '__main__':
+def main(argv: list) -> int:
     print("\n# Architectures:")
     pprint(all_architectures)
 
@@ -251,3 +252,8 @@ if __name__ == '__main__':
 
     print("\n# all sim:")
     pprint([p.name for p in platforms.values() if p.has_simulation])
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
