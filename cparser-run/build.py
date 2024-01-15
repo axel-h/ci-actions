@@ -28,12 +28,17 @@ def run_cparser(manifest_dir: str, build) -> int:
     return run_build_script(manifest_dir, build, script)
 
 
-# If called as main, run all builds from builds.yml
-if __name__ == '__main__':
+def main(argv: list) -> int:
+
     builds = load_builds(os.path.dirname(__file__) + "/builds.yml")
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--dump':
+    if len(argv) > 1 and argv[1] == '--dump':
         pprint(builds)
-        sys.exit(0)
+        return 0
 
-    sys.exit(run_builds(builds, run_cparser))
+    # by default, run all builds from builds.yml
+    return run_builds(builds, run_cparser)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
