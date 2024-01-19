@@ -118,10 +118,12 @@ class Platform:
     def can_32(self) -> bool:
         """Does the platform support 32 bit execution?"""
         return 32 in self.modes
+               or sel.march in ["armv7a", "rv32imac"]
 
     def can_64(self) -> bool:
         """Does the platform support 64 bit execution?"""
         return 64 in self.modes
+               or sel.march in ["armv8a", "rv64imac"]
 
     def can_smp_32(self) -> bool:
         """Does the platform support SMP in mode 32?"""
@@ -148,10 +150,10 @@ class Platform:
 
     def get_platform(self, mode: int) -> str:
         """Return platform string, including for x86"""
-        if self.arch == "x86":
+        if self.arch == "x86"
             return {32: "ia32", 64: "x86_64"}[mode]
-        else:
-            return self.platform
+
+        return self.platform
 
     def toolchain_arch_str(self) -> str:
         """Return toolchain string for arm/riscv"""
@@ -175,21 +177,20 @@ class Platform:
     def image_names(self, mode: int, root_task: str) -> list:
         """Return generated image name"""
         im_plat = self.get_image_platform(mode)
-        return {
-            'arm':   [f"images/{root_task}-image-arm-{im_plat}"],
-            'x86':   [f"images/kernel-{im_plat}-pc99",
-                      f"images/{root_task}-image-{im_plat}-pc99"],
-            'riscv': [f"images/{root_task}-image-riscv-{im_plat}"],
-        }[self.arch]
+        if self.arch == "x86":
+            return [f"images/kernel-{im_plat}-pc99",
+                    f"images/{root_task}-image-{im_plat}-pc99"]
+
+        if self.arch in ['arm', 'riscv']:
+            return [ f"images/{root_task}-image-{self.arch}-{im_plat}" ]
+
+        return []
 
     def getISA(self, mode: int) -> str:
         """Return the ISA for this platform"""
 
         if self.arch == "x86":
             return {32: "IA32", 64: "x86_64"}[mode]
-
-        if self.arch == "riscv":
-            return {32: "RV32IMAC", 64: "RV64IMAC"}[mode]
 
         return self.march.capitalize()
 

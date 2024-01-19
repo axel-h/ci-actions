@@ -24,48 +24,43 @@ architectures: [x86, arm, riscv]
 
 platforms:
   SPIKE32:
-    arch: riscv
-    modes: [32]
     platform: spike
-    has_simulation: true
+    arch: riscv
     march: rv32imac
+    has_simulation: true
     no_hw_test: true
     no_hw_build: true
 
   SPIKE64:
-    arch: riscv
-    modes: [64]
     platform: spike
-    has_simulation: true
+    arch: riscv
     march: rv64imac
+    has_simulation: true
     no_hw_test: true
     no_hw_build: true
 
   RISCVVIRT64:
-    arch: riscv
-    modes: [64]
     platform: qemu-riscv-virt
-    has_simulation: true
+    arch: riscv
     march: rv64imac
+    has_simulation: true
     no_hw_test: true
     no_hw_build: true
 
   RISCVVIRT32:
-    arch: riscv
-    modes: [32]
     platform: qemu-riscv-virt
-    has_simulation: true
+    arch: riscv
     march: rv32imac
+    has_simulation: true
     no_hw_test: true
     no_hw_build: true
 
   HIFIVE:
-    arch: riscv
-    modes: [64]
-    smp: [64]
     platform: hifive
-    req: [hifive] # , hifive1]
+    arch: riscv
     march: rv64imac
+    smp: [64]
+    req: [hifive] # , hifive1]
 
   POLARFIRE:
     arch: riscv
@@ -76,65 +71,59 @@ platforms:
     no_hw_test: true
 
   SABRE:
-    arch: arm
-    modes: [32]
-    smp: [32]
     platform: sabre
+    arch: arm
+    march: armv7a
+    smp: [32]
     image_platform: imx6
     req: [sabre, sabre4, sabre2]
     has_simulation: true
-    march: armv7a
 
   ROCKPRO64:
-    arch: arm
-    modes: [64]
     platform: rockpro64
-    req: [rockpro64a]
+    arch: arm
     march: armv8a
+    req: [rockpro64a]
     no_hw_test: true
 
   QUARTZ64:
-    arch: arm
-    modes: [64]
     platform: quartz64
+    arch: arm
     march: armv8a
     no_hw_test: true
 
   ARMVIRT32:
-    arch: arm
-    modes: [32]
     platform: qemu-arm-virt
-    has_simulation: true
+    arch: arm
     march: armv7a # Cortex-A15 is emulated by default
+    has_simulation: true
     no_hw_test: true
     no_hw_build: true
 
   ARMVIRT64:
-    arch: arm
-    modes: [64]
     platform: qemu-arm-virt
-    has_simulation: true
+    arch: arm
     march: armv8a # Cortex-A53 is emulated by default
+    has_simulation: true
     no_hw_test: true
     no_hw_build: true
 
   IMX8MQ_EVK:
+    platform: imx8mq-evk
     arch: arm
-    modes: [64]
+    march: armv8a
     smp: [64]
     aarch_hyp: [64]
-    platform: imx8mq-evk
     req: [imx8mq]
-    march: armv8a
 
   MAAXBOARD:
+    platform: maaxboard
     arch: arm
+    march: armv8a
     modes: [32, 64]
     smp: [64]
     aarch_hyp: [64]
-    platform: maaxboard
     req: [maaxboard1]
-    march: armv8a
     no_hw_build: true
     # The MaaxBoard in machine queue expects a binary image
     # settings:
@@ -142,216 +131,201 @@ platforms:
     # ElfloaderImage: "binary"
 
   IMX8MM_EVK:
+    platform: imx8mm-evk
     arch: arm
+    march: armv8a
     modes: [32, 64]
     smp: [64]
-    platform: imx8mm-evk
     req: [imx8mm]
-    march: armv8a
 
   TQMA8XQP1GB:
-    arch: arm
-    modes: [64]
-    smp: [64]
     platform: tqma8xqp1gb
-    req: [tqma]
+    arch: arm
     march: armv8a
+    smp: [64]
+    req: [tqma]
 
   OMAP3:
-    arch: arm
-    modes: [32]
     platform: omap3
-    req: [beagle]
+    arch: arm
     march: armv7a
+    modes: [32]
+    req: [beagle]
 
   AM335X_BONEBLACK:
-    arch: arm
-    modes: [32]
     platform: am335x-boneblack
+    arch: arm
+    march: armv8a
     image_platform: am335x
     req: [bboneblack]
-    march: armv8a
 
   ODROID_C2:
-    arch: arm
-    modes: [64]
     platform: odroidc2
-    req: [odroidc2]
+    arch: arm
     march: armv8a
+    req: [odroidc2]
+
 
   ODROID_C4:
+    platform: odroidc4
     arch: arm
-    modes: [64]
+    march: armv8a
     aarch_hyp: [64]
     smp: [64]
-    platform: odroidc4
     req: [odroidc4_1, odroidc4_2]
-    march: armv8a
 
   ODROID_X:
-    arch: arm
-    modes: [32]
     platform: exynos4
-    req: [odroid]
+    arch: arm
     march: armv7a
+    req: [odroid]
     no_hw_test: true
 
   ODROID_XU:
-    arch: arm
-    modes: [32]
-    aarch_hyp: [32]
     platform: exynos5410
+    arch: arm
+    march: armv7a
+    aarch_hyp: [32]
     req: [odroid-xu]
     image_platform: exynos5
-    march: armv7a
     no_hw_test: true
 
   ARNDALE:
-    arch: arm
-    modes: [32]
     platform: exynos5250
+    arch: arm
+    march: armv7a
     req: [arndale]
     image_platform: exynos5
-    march: armv7a
     no_hw_build: true
 
   ODROID_XU4:
-    arch: arm
-    modes: [32]
-    aarch_hyp: [32]
     platform: exynos5422
+    arch: arm
+    march: armv7a
+    aarch_hyp: [32]
     req: [odroidxu4_2]
     image_platform: exynos5
-    march: armv7a
 
   ZYNQ7000:
-    arch: arm
-    modes: [32]
     platform: zynq7000
+    arch: arm
+    march: armv7a
     req: [zc706]
     has_simulation: true
-    march: armv7a
     no_hw_test: true
 
   ZYNQMP:
+    platform: zynqmp
     arch: arm
+    march: armv8a
     modes: [32, 64]
     smp: [64]
     aarch_hyp: [32, 64]
-    platform: zynqmp
     req: [zcu102_2]
-    march: armv8a
     # The ZCU102 in machine queue expects a binary image
     # settings:
     # Sel4testAllowSettingsOverride: true
     # ElfloaderImage: "binary"
 
   ZYNQMP106:
+    platform: zynqmp
     arch: arm
+    march: armv8a
     modes: [32, 64]
     smp: [64]
     aarch_hyp: [32, 64]
-    platform: zynqmp
     req: [zcu106]
-    march: armv8a
 
   HIKEY:
+    platform: hikey
     arch: arm
+    march: armv8a
     modes: [32, 64]
     aarch_hyp: [64]
-    platform: hikey
     req: [hikey]
-    march: armv8a
     no_hw_test: true
 
   TK1:
-    arch: arm
-    modes: [32]
-    aarch_hyp: [32]
     platform: tk1
-    req: [jetson1]
+    arch: arm
     march: armv7a
+    aarch_hyp: [32]
+    req: [jetson1]
 
   RPI3:
-    arch: arm
-    modes: [32]
     platform: rpi3
+    arch: arm
+    march: armv8a # ARMv8 platform currently used in AARCH32 mode only.
+    modes: [32]
     req: [rpi3]
     image_platform: bcm2837
-    march: armv8a # ARMv8 platform currently used in AARCH32 mode only.
     no_hw_test: true
 
   RPI4:
-    arch: arm
-    modes: [64]
     platform: rpi4
+    arch: arm
+    march: armv8a
     req: [pi4B]
     image_platform: bcm2711
-    march: armv8a
     no_hw_test: true
 
   TX1:
+    platform: tx1
     arch: arm
-    modes: [64]
+    march: armv8a
     smp: [64]
     aarch_hyp: [64]
-    platform: tx1
     req: [tx1a]
-    march: armv8a
 
   TX2:
+    platform: tx2
     arch: arm
-    modes: [64]
+    march: armv8a
     smp: [64]
     aarch_hyp: [64]
-    platform: tx2
     req: [tx2a, tx2b]
-    march: armv8a
 
   APQ8064:
-    arch: arm
-    modes: [32]
     platform: apq8064
+    arch: arm
+    march: armv7a
+    modes: [32]
     req: [inforce]
     image_platform: inforce
-    march: armv7a
     no_hw_build: true
 
   WANDQ:
-    arch: arm
-    modes: [32]
     platform: wandq
+    arch: arm
+    march: armv7a
     image_platform: imx6
-    # march: ?
     no_hw_test: true
     no_hw_build: true
 
   ALLWINNER20:
-    arch: arm
-    modes: [32]
     platform: allwinner20
+    arch: arm
     march: armv7a
     no_hw_test: true
     no_hw_build: true
 
   IMX7SABRE:
-    arch: arm
-    modes: [32]
     platform: imx7sabre
+    arch: arm
+    march: armv7a
     req: [imx7]
     image_platform: imx7
-    # march: ?
     no_hw_test: true
     no_hw_build: true
 
   PC99:
+    platform: x86_64
     arch: x86
+    march: nehalem
     modes: [32, 64]
     smp: [32, 64]
-    platform: x86_64
     req: [skylake, haswell3, haswell4, skylake2]
     has_simulation: true
-    march: nehalem
 
 # platforms where MCS is wholly unsupported
 # (for platforms with partial support see sel4test-hw/build.py and comments below)
