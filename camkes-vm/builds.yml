@@ -129,6 +129,12 @@ builds:
     app: vm_multi
     platform: ODROID_XU4
     success: 'buildroot login:.*buildroot login:.*buildroot login:'
+# FAILS, see also https://github.com/seL4/camkes-vm-examples/issues/18
+#- vm_multi_ARMVIRT:
+#    app: vm_multi
+#    platform: ARMVIRT
+#    sim: true
+#    success: 'buildroot login:.*buildroot login:.*buildroot login:'
 - vm_cross_connector_ODROID_XU4:
     app: vm_cross_connector
     platform: ODROID_XU4
