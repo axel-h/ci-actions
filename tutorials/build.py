@@ -52,7 +52,8 @@ def main(params: list) -> int:
     g.add_argument('--build', action='store_true')
     args = parser.parse_args(params)
 
-    yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
+    builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
+    yml = load_yaml(builds_yaml_file)
     disable_app_for = yml['disable_app_for']
     builds = load_builds(None, build_filter, yml)
 

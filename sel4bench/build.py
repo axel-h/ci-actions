@@ -366,7 +366,8 @@ def main(params: list) -> int:
     g.add_argument('--build', action='store_true')
     args = parser.parse_args(argv[1:])
 
-    yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
+    builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
+    yml = load_yaml(builds_yaml_file)
     builds = load_builds(None, filter_fun=build_filter, yml=yml)
 
     # add additional builds; run only env filter, trusting that manual builds

@@ -212,7 +212,8 @@ def gh_output(assgn: str):
 
 
 # module init:
-_yaml_platforms = load_yaml(os.path.dirname(__file__) + "/platforms.yml")
+_platforms_yaml_file = os.path.join(os.path.dirname(__file__), "platforms.yml")
+_yaml_platforms = load_yaml(_platforms_yaml_file)
 
 all_architectures = _yaml_platforms["architectures"]
 all_modes = _yaml_platforms["modes"]
