@@ -38,7 +38,8 @@ def main(params: list) -> int:
     g.add_argument('--build', action='store_true')
     args = parser.parse_args(params)
 
-    builds = load_builds(os.path.dirname(__file__) + "/builds.yml")
+    builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
+    builds = load_builds(builds_yaml_file)
 
     if args.dump:
         pprint(builds)
