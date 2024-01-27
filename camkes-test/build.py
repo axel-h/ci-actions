@@ -133,7 +133,8 @@ def main(params: list) -> int:
     g.add_argument('--build', action='store_true')
     args = parser.parse_args(params)
 
-    yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
+    builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
+    yml = load_yaml(builds_yaml_file)
     apps = yml['apps']
     sim_builds = [SimBuild(s) for s in yml['sim']]
     hw_builds = load_builds(None, build_filter, yml)
