@@ -13,9 +13,9 @@ import os
 import argparse
 import json
 
-from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP
-from platforms import load_yaml, gh_output
-from pprint import pprint
+import builds
+import platforms
+import pprint
 
 
 # See also builds.yml for how builds are split up in this test. We use the build
@@ -41,10 +41,10 @@ class SimBuild():
             ' })'
 
 
-def run_build(manifest_dir: str, build: Build | SimBuild) -> int:
+def run_build(manifest_dir: str, build: builds.Build | SimBuild) -> int:
     """Run one CAmkES test. Can be either Build or SimBuild."""
 
-    if isinstance(build, Build):
+    if isinstance(build, builds.Build):
         app = apps[build.app]
         build.files = build.get_platform().image_names(build.get_mode(), "capdl-loader")
         build.settings['CAMKES_APP'] = build.app
@@ -77,23 +77,23 @@ def run_build(manifest_dir: str, build: Build | SimBuild) -> int:
     else:
         print(f"Warning: unknown build type for {build.name}")
 
-    return run_build_script(manifest_dir, build, script)
+    return builds.run_build_script(manifest_dir, build, script)
 
 
-def hw_run(manifest_dir: str, build: Build) -> int:
+def hw_run(manifest_dir: str, build: builds.Build) -> int:
     """Run one hardware test."""
 
     if build.is_disabled():
         print(f"Build {build.name} disabled, skipping.")
-        return SKIP
+        return builds.SKIP
 
     build.success = apps[build.app]['success']
     script, final = build.hw_run('log.txt')
 
-    return run_build_script(manifest_dir, build, script, final_script=final)
+    return builds.run_build_script(manifest_dir, build, script, final_script=final)
 
 
-def build_filter(build: Build) -> bool:
+def build_filter(build: builds.Build) -> bool:
     if not build.app:
         return False
 
@@ -116,14 +116,14 @@ def sim_build_filter(build: SimBuild) -> bool:
     return (not name or build.name == name) and (not plat or plat == 'sim')
 
 
-def gh_output_matrix(param_name: str, builds: list[Build]) -> None:
-    build_list = [{"name": b.name,
-                   "platform": b.get_platform().name
-                  }
-                  for b in builds]
+def gh_output_matrix(param_name: str, build_list: list[builds.Build]) -> None:
+    matrix_builds = [{"name": b.name,
+                      "platform": b.get_platform().name
+                     }
+                     for b in build_list]
     # GitHub output assignment
-    matrix_json = json.dumps({"include": build_list})
-    gh_output(f"{param_name}={matrix_json}")
+    matrix_json = json.dumps({"include": matrix_builds})
+    platforms.gh_output(f"{param_name}={matrix_json}")
 
 
 def main(params: list) -> int:
@@ -137,29 +137,29 @@ def main(params: list) -> int:
     args = parser.parse_args(params)
 
     builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
-    yml = load_yaml(builds_yaml_file)
+    yml = platforms.load_yaml(builds_yaml_file)
     apps = yml['apps']
     sim_builds = [SimBuild(s) for s in yml['sim']]
-    hw_builds = load_builds(None, build_filter, yml)
-    builds = [b for b in sim_builds if sim_build_filter(b)] + hw_builds
+    hw_builds = builds.load_builds(None, build_filter, yml)
+    build_list = [b for b in sim_builds if sim_build_filter(b)] + hw_builds
 
     if args.dump:
-        pprint(builds)
+        pprint.pprint(build_list)
         return 0
 
     if args.matrix:
-        gh_output_matrix("matrix", builds)
+        gh_output_matrix("matrix", build_list)
         return 0
 
     if args.hw:
-        return run_builds(builds, hw_run)
+        return builds.run_builds(build_list, hw_run)
 
     if args.post:
-        release_mq_locks(builds)
+        builds.release_mq_locks(build_list)
         return 0
 
     # perform args.build as default
-    return run_builds(builds, run_build)
+    return builds.run_builds(build_list, run_build)
 
 
 if __name__ == '__main__':

@@ -14,13 +14,12 @@ import argparse
 import json
 import itertools
 
-from builds import Build, run_build_script, run_builds, load_builds, junit_results
-from builds import release_mq_locks, SKIP
-from platforms import Platform, gh_output
-from pprint import pprint
+import builds
+import platforms
+import pprint
 
 
-def hw_build(manifest_dir: str, build: Build) -> int:
+def hw_build(manifest_dir: str, build: builds.Build) -> int:
     """Run one hardware build."""
 
     if build.get_platform().name == "RPI4":
@@ -35,22 +34,22 @@ def hw_build(manifest_dir: str, build: Build) -> int:
         ["cp", "kernel/kernel.elf", f"../{build.name}-kernel.elf"]
     ]
 
-    return run_build_script(manifest_dir, build, script)
+    return builds.run_build_script(manifest_dir, build, script)
 
 
-def hw_run(manifest_dir: str, build: Build) -> int:
+def hw_run(manifest_dir: str, build: builds.Build) -> int:
     """Run one hardware test."""
 
     if build.is_disabled():
         print(f"Build {build.name} disabled, skipping.")
-        return SKIP
+        return builds.SKIP
 
-    script, final = build.hw_run(junit_results)
+    script, final = build.hw_run(builds.junit_results)
 
-    return run_build_script(manifest_dir, build, script, final_script=final, junit=True)
+    return builds.run_build_script(manifest_dir, build, script, final_script=final, junit=True)
 
 
-def build_filter(build: Build) -> bool:
+def build_filter(build: builds.Build) -> bool:
     plat = build.get_platform()
 
     if plat.no_hw_build:
@@ -102,12 +101,12 @@ def build_filter(build: Build) -> bool:
     return True
 
 
-def gh_output_matrix(param_name: str, builds: list[Build]) -> None:
-    build_list = []
+def gh_output_matrix(param_name: str, build_list: list[builds.Build]) -> None:
+    matrix_builds = []
     # Loop over all the different platforms of the build list. Using
     # set-comprehension " { ... for ... } " instead of list-comprehension
     # " [ ... for ... ] " eliminates duplicates automatically.
-    for plat in {b.get_platform() for b in builds}:
+    for plat in {b.get_platform() for b in build_list}:
 
         # ignore all platforms that can't tested or not even be built
         if plat.no_hw_test or plat.no_hw_build:
@@ -123,11 +122,11 @@ def gh_output_matrix(param_name: str, builds: list[Build]) -> None:
                              "march": plat.march,
                              **dict(zip(variants.keys(), vals))
                             }
-            build_list.append(build_variant)
+            matrix_builds.append(build_variant)
 
     # GitHub output assignment
-    matrix_json = json.dumps({"include": build_list})
-    gh_output(f"{param_name}={matrix_json}")
+    matrix_json = json.dumps({"include": matrix_builds})
+    platforms.gh_output(f"{param_name}={matrix_json}")
 
 
 def main(params: list) -> int:
@@ -141,26 +140,26 @@ def main(params: list) -> int:
     args = parser.parse_args(params)
 
     builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
-    builds = load_builds(builds_yaml_file, filter_fun=build_filter)
+    build_list = builds.load_builds(builds_yaml_file, filter_fun=build_filter)
 
     if args.dump:
-        pprint(builds)
+        pprint.pprint(build_list)
         return 0
 
     if args.matrix:
-        gh_output_matrix("matrix", builds)
+        gh_output_matrix("matrix", build_list)
         return 0
 
     if args.hw:
-        run_builds(builds, hw_run)
+        builds.run_builds(build_list, hw_run)
         return 0
 
     if args.post:
-        release_mq_locks(builds)
+        builds.release_mq_locks(build_list)
         return 0
 
     # perform args.build as default
-    return run_builds(builds, hw_build)
+    return builds.run_builds(build_list, hw_build)
 
 
 if __name__ == '__main__':

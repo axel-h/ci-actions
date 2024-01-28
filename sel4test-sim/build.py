@@ -12,11 +12,11 @@ import sys
 import os
 import argparse
 
-from builds import Build, run_build_script, run_builds, load_builds, junit_results
-from pprint import pprint
+import builds
+import pprint
 
 
-def run_simulation(manifest_dir: str, build: Build) -> int:
+def run_simulation(manifest_dir: str, build: builds.Build) -> int:
     """Run one simulation build and test."""
 
     expect = '"%s" {exit 0} timeout {exit 1}' % build.success
@@ -25,10 +25,10 @@ def run_simulation(manifest_dir: str, build: Build) -> int:
         ["../init-build.sh"] + build.settings_args(),
         ["ninja"],
         ["bash", "-c",
-         f"expect -c 'spawn ./simulate; set timeout 1200; expect {expect}' | tee {junit_results}"]
+         f"expect -c 'spawn ./simulate; set timeout 1200; expect {expect}' | tee {builds.junit_results}"]
     ]
 
-    return run_build_script(manifest_dir, build, script, junit=True)
+    return builds.run_build_script(manifest_dir, build, script, junit=True)
 
 
 def main(params: list) -> int:
@@ -39,14 +39,14 @@ def main(params: list) -> int:
     args = parser.parse_args(params)
 
     builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
-    builds = load_builds(builds_yaml_file)
+    build_list = builds.load_builds(builds_yaml_file)
 
     if args.dump:
-        pprint(builds)
+        pprint.pprint(build_list)
         return 0
 
     # perform args.build as default
-    return run_builds(builds, run_simulation)
+    return builds.run_builds(build_list, run_simulation)
 
 
 if __name__ == '__main__':

@@ -12,7 +12,7 @@ import sys
 import os
 import argparse
 
-from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP, sim_script
+from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP
 from pprint import pprint
 
 
@@ -22,7 +22,7 @@ from pprint import pprint
 
 # The only thing this really has in common with a "Build" is the "name" field.
 
-def run_build(manifest_dir: str, build: Build) -> int:
+def run_build(manifest_dir: str, build: builds.Build) -> int:
     """Run one CAmkES VM test."""
 
     plat = build.get_platform()
@@ -50,22 +50,22 @@ def run_build(manifest_dir: str, build: Build) -> int:
     if plat.has_simulation and plat.name != 'PC99':
         script.append(sim_script(build.success, failure=build.error))
 
-    return run_build_script(manifest_dir, build, script)
+    return builds.run_build_script(manifest_dir, build, script)
 
 
-def hw_run(manifest_dir: str, build: Build) -> int:
+def hw_run(manifest_dir: str, build: builds.Build) -> int:
     """Run one hardware test."""
 
     if build.is_disabled():
         print(f"Build {build.name} disabled, skipping.")
-        return SKIP
+        return builds.SKIP
 
     plat = build.get_platform()
     build.files = plat.image_names(build.get_mode(), "capdl-loader")
 
     script, final = build.hw_run('log.txt')
 
-    return run_build_script(manifest_dir, build, script, final_script=final)
+    return builds.run_build_script(manifest_dir, build, script, final_script=final)
 
 
 def main(params: list) -> int:
@@ -78,21 +78,21 @@ def main(params: list) -> int:
     args = parser.parse_args(params)
 
     builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
-    builds = load_builds(builds_yaml_file)
+    build_list = builds.load_builds(builds_yaml_file)
 
     if args.dump:
-        pprint(builds)
+        pprint.pprint(build_list)
         return 0
 
     if args.hw:
-        return run_builds(builds, hw_run)
+        return builds.run_builds(build_list, hw_run)
 
     if args.post:
-        release_mq_locks(builds)
+        builds.release_mq_locks(build_list)
         return 0
 
     # perform args.build as default
-    return run_builds(builds, run_build)
+    return builds.run_builds(build_list, run_build)
 
 
 if __name__ == '__main__':
