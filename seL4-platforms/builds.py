@@ -20,9 +20,9 @@ import shutil
 import copy
 import time
 
+import platforms
+from platforms import ValidationException
 from junitparser.junitparser import Failure, Error
-from platforms import ValidationException, Platform, platforms, load_yaml, mcs_unsupported
-
 from junitparser import JUnitXml
 
 
@@ -98,9 +98,9 @@ class Build:
             # Sel4testSimulation and Sel4testHaveCache.
             self.settings["SIMULATION"] = "TRUE"
 
-    def get_platform(self) -> Platform:
+    def get_platform(self) -> platforms.Platform:
         """Return the Platform object for this build definition."""
-        return platforms[self.platform]
+        return platforms.platforms[self.platform]
 
     def get_mode(self) -> int:
         """Return the mode (32/64) for this build; taken from platform if not defined"""
@@ -168,7 +168,7 @@ class Build:
         return not self.is_clang()
 
     def can_mcs(self) -> bool:
-        return self.get_platform().name not in mcs_unsupported
+        return self.get_platform().name not in platforms.mcs_unsupported
 
     def set_mcs(self):
         if not self.can_mcs():
@@ -878,7 +878,7 @@ def load_builds(file_name: str, filter_fun=lambda x: True,
     Applies defaults, variants, and build-filter from the yaml file.
     Takes an optional filtering function for removing unwanted builds."""
 
-    yml = yml or load_yaml(file_name)
+    yml = yml or platforms.load_yaml(file_name)
 
     default_build = yml.get("default", {})
     build_filters = yml.get("build-filter", [])
@@ -887,7 +887,7 @@ def load_builds(file_name: str, filter_fun=lambda x: True,
     yml_builds = yml.get("builds", [])
 
     if yml_builds == []:
-        base_builds = [build_for_platform(p, default_build) for p in platforms.keys()]
+        base_builds = [build_for_platform(p, default_build) for p in platforms.platforms.keys()]
     else:
         base_builds = [Build(b, default_build) for b in yml_builds]
 
