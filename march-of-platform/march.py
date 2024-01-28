@@ -3,21 +3,27 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import sys
+#import argparse
 from platforms import platforms, gh_output
 
 
-def main(argv: list) -> int:
-    if len(argv) != 2:
+def main(params: list) -> int:
+    #parser = argparse.ArgumentParser()
+    #g = parser.add_mutually_exclusive_group()
+    #args = parser.parse_args()
+
+    if len(params) != 2:
         return 1
 
-    plat = platforms.get(argv[1].upper())
+    arg = params[1]
+    plat = platforms.get(arg.upper())
     if plat:
         gh_output(f"march={plat.march}")
         return 0
 
-    print(f"Unknown platform {argv[1]}")
+    print(f"Unknown platform: '{arg}'")
     return 1
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(main(sys.argv[1:]))
