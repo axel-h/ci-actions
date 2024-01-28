@@ -8,16 +8,15 @@ Parse builds.yml and run sel4test hardware builds and runs on each of the build 
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+import json
+
 from builds import Build, run_build_script, run_builds, load_builds, junit_results
 from builds import release_mq_locks, SKIP
 from platforms import Platform, gh_output
-
 from pprint import pprint
 from typing import List
-
-import json
-import os
-import sys
 
 
 def hw_build(manifest_dir: str, build: Build):
