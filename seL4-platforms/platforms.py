@@ -15,10 +15,11 @@ modes, platforms, a list of unsupported platforms, and a list of named machines.
 """
 
 from io import StringIO
+import os
+import yaml
 from typing import Optional
 from pprint import pprint
-import yaml
-import os
+
 
 # exported names:
 __all__ = [

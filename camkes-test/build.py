@@ -8,15 +8,14 @@ Parse builds.yml and run CAmkES test on each of the build definitions.
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
-from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP
-from pprint import pprint
-from typing import List, Union
-
-import json
-import os
 import sys
+import os
+import json
 
+from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP
 from platforms import load_yaml, gh_output
+from pprint import pprint
+
 
 # See also builds.yml for how builds are split up in this test. We use the build
 # matrix and filtering for the hardware builds, and an explicit list for the
@@ -116,7 +115,7 @@ def sim_build_filter(build: SimBuild):
     return (not name or build.name == name) and (not plat or plat == 'sim')
 
 
-def to_json(builds: List[Build]) -> str:
+def to_json(builds: list[Build]) -> str:
     """Return a GitHub build matrix as GitHub output assignment."""
 
     matrix = {"include": [{"name": b.name, "platform": b.get_platform().name} for b in builds]}

@@ -8,20 +8,19 @@ Parse builds.yml and either build sel4bench images or run sel4bench images.
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+import subprocess
+import json
+import time
+from datetime import datetime
+
 from builds import Build, Run, run_build_script, run_builds, load_builds, load_yaml
 from builds import release_mq_locks, filtered, get_env_filters, printc, ANSI_RED
 from builds import SKIP, SUCCESS, REPEAT, FAILURE
 
 from pprint import pprint
 from typing import List, Optional
-
-from datetime import datetime
-
-import json
-import os
-import sys
-import subprocess
-import time
 
 
 def adjust_build_settings(build: Build):

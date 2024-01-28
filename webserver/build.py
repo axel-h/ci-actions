@@ -8,11 +8,11 @@ Parse builds.yml and run the seL4 web server app build/test on each of the build
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+
 from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP, sim_script
 from pprint import pprint
-
-import os
-import sys
 
 
 # See also builds.yml for how builds are split up in this test. We use the build

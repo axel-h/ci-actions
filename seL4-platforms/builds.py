@@ -12,18 +12,19 @@ them, `run_build_script` for a standard test driver frame, and
 `default_junit_results` for a standard place to leave a jUnit summary file.
 """
 
+import sys
+import os
+import subprocess
+import shutil
+import copy
+import time
+
 from junitparser.junitparser import Failure, Error
 from platforms import ValidationException, Platform, platforms, load_yaml, mcs_unsupported
 
 from typing import Optional, List, Tuple, Union
 from junitparser import JUnitXml
 
-import copy
-import time
-import os
-import shutil
-import subprocess
-import sys
 
 # exported names:
 __all__ = [
