@@ -8,13 +8,13 @@ Parse builds.yml and run sel4test build + simulation on each of the build defini
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+import json
+
 from builds import Build, load_builds, run_build_script, run_builds, junit_results
 from platforms import load_yaml, gh_output
 from pprint import pprint
-
-import json
-import os
-import sys
 
 
 def run_simulation(manifest_dir: str, build: Build):

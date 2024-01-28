@@ -8,11 +8,11 @@ Parse builds.yml and run l4v C Parser test on each of the build definitions.
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+
 from builds import run_build_script, run_builds, load_builds
 from pprint import pprint
-
-import os
-import sys
 
 
 def run_cparser(manifest_dir: str, build):

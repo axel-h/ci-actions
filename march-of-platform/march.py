@@ -2,8 +2,9 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
-from platforms import platforms, gh_output
 import sys
+from platforms import platforms, gh_output
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:

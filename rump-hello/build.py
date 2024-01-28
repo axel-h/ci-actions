@@ -8,12 +8,12 @@ Parse builds.yml and run rumprun test on each of the build definitions.
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+
 from builds import Build, run_build_script, run_builds, load_builds, sim_script
 from builds import release_mq_locks, SKIP
 from pprint import pprint
-
-import os
-import sys
 
 
 def adjust_build(build: Build):
