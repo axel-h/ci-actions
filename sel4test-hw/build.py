@@ -10,6 +10,7 @@ Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 
 import sys
 import os
+import argparse
 import json
 
 from builds import Build, run_build_script, run_builds, load_builds, junit_results
@@ -145,27 +146,37 @@ def to_json(builds: List[Build]) -> str:
     return "matrix=" + json.dumps(matrix)
 
 
-def main(argv: list) -> int:
+def main(params: list) -> int:
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('--dump', action='store_true')
+    g.add_argument('--matrix', action='store_true')
+    g.add_argument('--hw', action='store_true')
+    g.add_argument('--post', action='store_true')
+    g.add_argument('--build', action='store_true')
+    args = parser.parse_args(params)
+
     builds = load_builds(os.path.dirname(__file__) + "/builds.yml", filter_fun=build_filter)
 
-    if len(argv) > 1 and argv[1] == '--dump':
+    if args.dump:
         pprint(builds)
         return 0
 
-    if len(argv) > 1 and argv[1] == '--matrix':
+    if args.matrix:
         gh_output(to_json(builds))
-        sys.exit(0)
+        return 0
 
-    if len(argv) > 1 and argv[1] == '--hw':
-        return run_builds(builds, hw_run))
+    if args.hw:
+        run_builds(builds, hw_run)
+        return 0
 
-    if len(argv) > 1 and argv[1] == '--post':
+    if args.post:
         release_mq_locks(builds)
         return 0
 
-    # by default, run all builds from builds.yml
+    # perform args.build as default
     return run_builds(builds, hw_build)
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(main(sys.argv[1:]))
