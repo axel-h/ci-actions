@@ -11,6 +11,7 @@ Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 import sys
 import os
 import subprocess
+import argparse
 import json
 import time
 from datetime import datetime
@@ -355,7 +356,16 @@ def gen_web(runs: list[Run], yml, file_name: str):
         f.write('.</p>')
 
 
-def main(argv: list) -> int:
+def main(params: list) -> int:
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('--dump', action='store_true')
+    g.add_argument('--hw', action='store_true')
+    g.add_argument('--post', action='store_true')
+    g.add_argument('--web', action='store_true')
+    g.add_argument('--build', action='store_true')
+    args = parser.parse_args(argv[1:])
+
     yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
     builds = load_builds(None, filter_fun=build_filter, yml=yml)
 
@@ -366,24 +376,24 @@ def main(argv: list) -> int:
     more_builds = [Build(b, default_build) for b in yml.get("more_builds", [])]
     builds.extend([b for b in more_builds if b and filtered(b, env_filters)])
 
-    if len(argv) > 1 and argv[1] == '--dump':
+    if args.dump:
         pprint(builds)
         return 0
 
-    if len(argv) > 1 and argv[1] == '--hw':
+    if args.hw:
         return run_builds(make_runs(builds), hw_run)
 
-    if len(argv) > 1 and argv[1] == '--post':
+    if args.post:
         release_mq_locks(builds)
         return 0
 
-    if len(argv) > 1 and argv[1] == '--web':
+    if args.web:
         gen_web(make_runs(builds), yml, "index.html")
         return 0
 
-    # by default, run all builds from builds.yml
+    # perform args.build as default
     return run_builds(builds, hw_build)
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(main(sys.argv[1:]))

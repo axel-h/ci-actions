@@ -10,6 +10,7 @@ Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 
 import sys
 import os
+import argparse
 
 from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP, sim_script
 from pprint import pprint
@@ -60,23 +61,31 @@ def hw_run(manifest_dir: str, build: Build) -> int:
     return run_build_script(manifest_dir, build, script, final_script=final)
 
 
-def main(argv: list) -> int:
+def main(params: list) -> int:
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('--dump', action='store_true')
+    g.add_argument('--hw', action='store_true')
+    g.add_argument('--post', action='store_true')
+    g.add_argument('--build', action='store_true')
+    args = parser.parse_args(params)
+
     builds = load_builds(os.path.dirname(__file__) + "/builds.yml")
 
-    if len(argv) > 1 and argv[1] == '--dump':
+    if args.dump:
         pprint(builds)
         return 0
 
-    if len(argv) > 1 and argv[1] == '--hw':
+    if args.hw:
         return run_builds(builds, hw_run)
 
-    if len(argv) > 1 and argv[1] == '--post':
+    if args.post:
         release_mq_locks(builds)
         return 0
 
-    # by default, run all builds from builds.yml
+    # perform args.build as default
     return run_builds(builds, run_build)
 
 
 if __name__ == '__main__':
-    sys.exit(main(argv))
+    sys.exit(main(argv[1:]))
