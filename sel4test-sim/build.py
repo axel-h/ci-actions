@@ -15,7 +15,7 @@ from builds import Build, run_build_script, run_builds, load_builds, junit_resul
 from pprint import pprint
 
 
-def run_simulation(manifest_dir: str, build: Build):
+def run_simulation(manifest_dir: str, build: Build) -> int:
     """Run one simulation build and test."""
 
     expect = '"%s" {exit 0} timeout {exit 1}' % build.success

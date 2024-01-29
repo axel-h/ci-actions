@@ -14,10 +14,10 @@ The module loads platforms.yml on init, which includes available architectures,
 modes, platforms, a list of unsupported platforms, and a list of named machines.
 """
 
+from typing import Union
 from io import StringIO
 import os
 import yaml
-from typing import Optional
 from pprint import pprint
 
 
@@ -140,7 +140,7 @@ class Platform:
         """Does the platform support ARM_HYP in mode 64?"""
         return 64 in self.aarch_hyp
 
-    def get_mode(self) -> Optional[int]:
+    def get_mode(self) -> Union[int, None]:
         """Return mode (32/64) of this platform if unique, otherwise None"""
         if len(self.modes) == 1:
             return self.modes[0]
@@ -195,7 +195,7 @@ class Platform:
         return self.march.capitalize()
 
 
-def load_yaml(file_name):
+def load_yaml(file_name: str):
     """Load a yaml file"""
     with open(file_name, 'r') as file:
         return yaml.safe_load(file)

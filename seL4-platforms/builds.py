@@ -12,6 +12,7 @@ them, `run_build_script` for a standard test driver frame, and
 `default_junit_results` for a standard place to leave a jUnit summary file.
 """
 
+from typing import Union
 import sys
 import os
 import subprocess
@@ -22,7 +23,6 @@ import time
 from junitparser.junitparser import Failure, Error
 from platforms import ValidationException, Platform, platforms, load_yaml, mcs_unsupported
 
-from typing import Optional, List, Tuple, Union
 from junitparser import JUnitXml
 
 
@@ -102,7 +102,7 @@ class Build:
         """Return the Platform object for this build definition."""
         return platforms[self.platform]
 
-    def get_mode(self) -> Optional[int]:
+    def get_mode(self) -> int:
         """Return the mode (32/64) for this build; taken from platform if not defined"""
         if not self.mode and self.get_platform().get_mode():
             return self.get_platform().get_mode()
@@ -228,7 +228,7 @@ class Build:
     def is_disabled(self) -> bool:
         return self.no_hw_test or self.get_platform().no_hw_test
 
-    def get_req(self) -> List[str]:
+    def get_req(self) -> list[str]:
         req = self.req or self.get_platform().req
         if not req or req == []:
             return []
@@ -252,13 +252,13 @@ class Run:
     Build class. So far we only vary machine requirements (req) and name in a Run.
     """
 
-    def __init__(self, build: Build, suffix: Optional[str] = None,
-                 req: Optional[str] = None):
+    def __init__(self, build: Build, suffix: str = None,
+                 req: str = None):
         self.build = build
         self.name = build.name + suffix if suffix else build.name
         self.req = req
 
-    def get_req(self) -> List[str]:
+    def get_req(self) -> list[str]:
         return self.req or self.build.get_req()
 
     def hw_run(self, log):
@@ -358,7 +358,7 @@ boot_fail_patterns = [
 ]
 
 
-def repeat_on_boot_failure(log: Optional[List[str]]) -> int:
+def repeat_on_boot_failure(log: list[str]) -> int:
     """Try to repeat the test run if the board failed to boot."""
 
     if log:
@@ -374,7 +374,7 @@ def repeat_on_boot_failure(log: Optional[List[str]]) -> int:
     return SUCCESS, None
 
 
-def release_mq_locks(runs: List[Union[Run, Build]]):
+def release_mq_locks(runs: list[Union[Run, Build]]):
     """Release locks from this job; runs the commands instead of returning a list."""
 
     def run(command):
@@ -415,7 +415,7 @@ def get_machine(req):
         return req[job_index % len(req)]
 
 
-def job_key():
+def job_key() -> str:
     return os.environ.get('GITHUB_REPOSITORY') + "-" + \
         os.environ.get('GITHUB_WORKFLOW') + "-" + \
         os.environ.get('GITHUB_RUN_ID') + "-" + \
@@ -425,15 +425,15 @@ def job_key():
 
 def mq_run(success_str: str,
            machine: str,
-           files: List[str],
+           files: list[str],
            retries: int = -1,
            lock_timeout: int = 8,
            completion_timeout: int = -1,
-           log: Optional[str] = None,
+           log: str = None,
            lock_held=False,
            keep_alive=False,
-           key: Optional[str] = None,
-           error_str: Optional[str] = None):
+           key: str = None,
+           error_str: str = None):
     """Machine queue mq.sh run command with arguments.
 
        Expects success marker, machine name, and boot image file(s).
@@ -462,22 +462,22 @@ def mq_run(success_str: str,
     return command
 
 
-def mq_lock(machine: str) -> List[str]:
+def mq_lock(machine: str) -> list[str]:
     """Get lock for a machine. Allow lock to be reclaimed after 30min."""
     return ['time', 'mq.sh', 'sem', '-wait', machine, '-k', job_key(), '-T', '1800']
 
 
-def mq_release(machine: str) -> List[str]:
+def mq_release(machine: str) -> list[str]:
     """Release lock on a machine."""
     return ['mq.sh', 'sem', '-signal', machine, '-k', job_key()]
 
 
-def mq_cancel(machine: str) -> List[str]:
+def mq_cancel(machine: str) -> list[str]:
     """Cancel processes waiting on lock for a machine."""
     return ['mq.sh', 'sem', '-cancel', machine, '-k', job_key()]
 
 
-def mq_print_lock(machine: str) -> List[str]:
+def mq_print_lock(machine: str) -> list[str]:
     """Print lock status for machine."""
     return ['mq.sh', 'sem', '-info', machine]
 
@@ -496,8 +496,8 @@ def success_from_bool(success: bool) -> int:
         return FAILURE
 
 
-def run_cmd(cmd, run: Union[Run, Build], prev_output: Optional[str] = None) -> int:
-    """If the command is a List[str], echo + run command with arguments, otherwise
+def run_cmd(cmd, run: Union[Run, Build], prev_output: str = None) -> int:
+    """If the command is a list[str], echo + run command with arguments, otherwise
     expect a function, and run that function on the supplied Run plus outputs from
     previous command."""
 
@@ -526,7 +526,7 @@ def printc(color: str, content: str):
     print(color + content + ANSI_RESET)
 
 
-def summarise_junit(file_path: str) -> Tuple[int, List[str]]:
+def summarise_junit(file_path: str) -> tuple[int, list[str]]:
     """Parse jUnit output and show a summary.
 
     Returns True if there were no failures or errors, raises exception
@@ -727,7 +727,7 @@ def build_for_platform(platform, default={}):
     return Build({platform: the_build})
 
 
-def build_for_variant(base_build: Build, variant, filter_fun=lambda x: True) -> Optional[Build]:
+def build_for_variant(base_build: Build, variant, filter_fun=lambda x: True) -> Build:
     """Make a build definition from a supplied base build and a build variant.
 
     Optionally takes a filter/validation function to reject specific build
@@ -786,7 +786,7 @@ def build_for_variant(base_build: Build, variant, filter_fun=lambda x: True) -> 
 def get_env_filters() -> list:
     """Process input env variables and return a build filter (list of dict)"""
 
-    def get(var: str) -> Optional[str]:
+    def get(var: str) -> Union[str, None]:
         return os.environ.get('INPUT_' + var.upper())
 
     def to_list(string: str) -> list:
@@ -800,7 +800,7 @@ def get_env_filters() -> list:
     return [filter]
 
 
-def filtered(build: Build, build_filters: dict) -> Optional[Build]:
+def filtered(build: Build, build_filters: dict) -> Build:
     """Return build if build matches filter criteria, otherwise None."""
 
     def match_dict(build: Build, f):
@@ -868,8 +868,8 @@ def filtered(build: Build, build_filters: dict) -> Optional[Build]:
     return None
 
 
-def load_builds(file_name: Optional[str], filter_fun=lambda x: True,
-                yml: Optional[dict] = None) -> List[Build]:
+def load_builds(file_name: str, filter_fun=lambda x: True,
+                yml: dict = None) -> list[Build]:
     """Load a list of build definitions from yaml.
 
     Use provided yaml dict, or if None, load from file. One of file_name, yml

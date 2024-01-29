@@ -17,7 +17,7 @@ from platforms import load_yaml, gh_output
 from pprint import pprint
 
 
-def run_simulation(manifest_dir: str, build: Build):
+def run_simulation(manifest_dir: str, build: Build) -> int:
     """Run one tutorial test."""
 
     script = [

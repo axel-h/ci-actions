@@ -15,7 +15,7 @@ from builds import run_build_script, run_builds, load_builds
 from pprint import pprint
 
 
-def run_cparser(manifest_dir: str, build):
+def run_cparser(manifest_dir: str, build) -> int:
     """Single run of the C Parser test, for one build definition"""
 
     script = [
