@@ -24,7 +24,7 @@ def adjust_build(build: Build):
         del build.settings['BAMBOO']
 
 
-def run_build(manifest_dir: str, build: Build):
+def run_build(manifest_dir: str, build: Build) -> int:
     """Run one rumprun-hello test."""
 
     adjust_build(build)
@@ -42,7 +42,7 @@ def run_build(manifest_dir: str, build: Build):
     return run_build_script(manifest_dir, build, script)
 
 
-def hw_run(manifest_dir: str, build: Build):
+def hw_run(manifest_dir: str, build: Build) -> int:
     """Run one hardware test."""
 
     adjust_build(build)

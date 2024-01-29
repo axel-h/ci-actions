@@ -21,7 +21,7 @@ from pprint import pprint
 
 # The only thing this really has in common with a "Build" is the "name" field.
 
-def run_build(manifest_dir: str, build: Build):
+def run_build(manifest_dir: str, build: Build) -> int:
     """Run one CAmkES VM test."""
 
     plat = build.get_platform()
@@ -52,7 +52,7 @@ def run_build(manifest_dir: str, build: Build):
     return run_build_script(manifest_dir, build, script)
 
 
-def hw_run(manifest_dir: str, build: Build):
+def hw_run(manifest_dir: str, build: Build) -> int:
     """Run one hardware test."""
 
     if build.is_disabled():

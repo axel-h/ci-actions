@@ -32,7 +32,7 @@ class SimBuild():
         self.name = sim['match'] + post
         self.__dict__.update(**sim)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"SimBuild('{self.name}', " '{' \
             f" 'match': '{self.match}'," \
             f" 'exclude': '{self.exclude}'," \
@@ -40,7 +40,7 @@ class SimBuild():
             ' })'
 
 
-def run_build(manifest_dir: str, build: Union[Build, SimBuild]):
+def run_build(manifest_dir: str, build: Build | SimBuild) -> int:
     """Run one CAmkES test. Can be either Build or SimBuild."""
 
     if isinstance(build, Build):
@@ -79,7 +79,7 @@ def run_build(manifest_dir: str, build: Union[Build, SimBuild]):
     return run_build_script(manifest_dir, build, script)
 
 
-def hw_run(manifest_dir: str, build: Build):
+def hw_run(manifest_dir: str, build: Build) -> int:
     """Run one hardware test."""
 
     if build.is_disabled():
@@ -92,7 +92,7 @@ def hw_run(manifest_dir: str, build: Build):
     return run_build_script(manifest_dir, build, script, final_script=final)
 
 
-def build_filter(build: Build):
+def build_filter(build: Build) -> bool:
     if not build.app:
         return False
 
@@ -109,7 +109,7 @@ def build_filter(build: Build):
     return True
 
 
-def sim_build_filter(build: SimBuild):
+def sim_build_filter(build: SimBuild) -> bool:
     name = os.environ.get('INPUT_NAME')
     plat = os.environ.get('INPUT_PLATFORM')
     return (not name or build.name == name) and (not plat or plat == 'sim')
