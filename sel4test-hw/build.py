@@ -16,10 +16,9 @@ from builds import Build, run_build_script, run_builds, load_builds, junit_resul
 from builds import release_mq_locks, SKIP
 from platforms import Platform, gh_output
 from pprint import pprint
-from typing import List
 
 
-def hw_build(manifest_dir: str, build: Build):
+def hw_build(manifest_dir: str, build: Build) -> int:
     """Run one hardware build."""
 
     if build.get_platform().name == "RPI4":
@@ -37,7 +36,7 @@ def hw_build(manifest_dir: str, build: Build):
     return run_build_script(manifest_dir, build, script)
 
 
-def hw_run(manifest_dir: str, build: Build):
+def hw_run(manifest_dir: str, build: Build) -> int:
     """Run one hardware test."""
 
     if build.is_disabled():
@@ -104,7 +103,7 @@ def build_filter(build: Build) -> bool:
 def to_json(builds: List[Build]) -> str:
     """Return a GitHub build matrix per enabled hardware platform as GitHub output assignment."""
 
-    def run_for_plat(plat: Platform) -> List[dict]:
+    def run_for_plat(plat: Platform) -> list[dict]:
         if plat.no_hw_test or plat.no_hw_build:
             return []
 

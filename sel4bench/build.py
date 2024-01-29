@@ -20,7 +20,6 @@ from builds import release_mq_locks, filtered, get_env_filters, printc, ANSI_RED
 from builds import SKIP, SUCCESS, REPEAT, FAILURE
 
 from pprint import pprint
-from typing import List, Optional
 
 
 def adjust_build_settings(build: Build):
@@ -35,7 +34,7 @@ def adjust_build_settings(build: Build):
         del build.settings['BAMBOO']
 
 
-def hw_build(manifest_dir: str, build: Build):
+def hw_build(manifest_dir: str, build: Build) -> int:
     """Do one hardware build."""
 
     adjust_build_settings(build)
@@ -69,7 +68,7 @@ def extract_json(results: str, run: Run) -> int:
     return SUCCESS if res.returncode == 0 else REPEAT
 
 
-def hw_run(manifest_dir: str, run: Run):
+def hw_run(manifest_dir: str, run: Run) -> int:
     """Run one hardware test."""
 
     if run.build.is_disabled():
@@ -119,7 +118,7 @@ def build_filter(build: Build) -> bool:
     return True
 
 
-def make_runs(builds: List[Build]) -> List[Run]:
+def make_runs(builds: list[Build]) -> list[Run]:
     """Split PC99 builds into runs for haswell3 and skylake, no changes to the rest"""
 
     # could filter more generically, but we're really only interested in REQ here,
@@ -142,7 +141,7 @@ def make_runs(builds: List[Build]) -> List[Run]:
     return runs
 
 
-def get_results(run: Run) -> List[float]:
+def get_results(run: Run) -> list[float]:
     """Get the benchmark results from JSON for a specific run."""
 
     with open(f"{run.name}.json") as f:
@@ -186,7 +185,7 @@ def get_results(run: Run) -> List[float]:
     return [irq_invoke, irq_invoke_s, ipc_call, ipc_call_s, ipc_reply, ipc_reply_s, notify, notify_s]
 
 
-def get_run(runs: List[Run], name: str) -> Optional[Run]:
+def get_run(runs: list[Run], name: str) -> Run:
     """Get a run by name."""
 
     for run in runs:
@@ -197,7 +196,7 @@ def get_run(runs: List[Run], name: str) -> Optional[Run]:
     return None
 
 
-def gen_web(runs: List[Run], yml, file_name: str):
+def gen_web(runs: list[Run], yml, file_name: str):
     """Generate web page for benchmark results according to the set defined in builds.yml"""
 
     manifest_sha = os.getenv('INPUT_MANIFEST_SHA')
