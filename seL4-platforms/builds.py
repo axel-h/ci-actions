@@ -43,21 +43,27 @@ REPEAT = 3
 
 
 class AnsiPrinter:
+   
+
     # colour codes
-    ANSI_RESET = "\033[0m"
-    ANSI_BOLD = "\033[1m"
-    #ANSI_BLACK = "\033[30m"
-    ANSI_RED = "\033[31;1m"
-    ANSI_GREEN = "\033[32m"
-    ANSI_YELLOW = "\033[33m"
-    ANSI_BLUE = "\033[34m"
-    ANSI_MAGENTA = "\033[35m"
-    ANSI_CYAN = "\033[36m"
-    ANSI_WHITE = "\033[37m"
+    ANSI_RESET =  ["0"]
+    ANSI_BOLD =   ["1"]
+    ANSI_RED =    ["31", "1"] # red + bold
+    ANSI_GREEN =  ["32"]
+    ANSI_YELLOW = ["33"]
+    ANSI_WHITE =  ["37"]
+
+    @staticmethod
+    def ansi_cmd_str(commands: str | list) -> str:
+        cmd = commands if isinstance(commands, str) else \
+            " ".join(commands) if isinstance(commands, list) else \
+            str(cmd)
+        return f"\033[{cmd_str}m"
+
 
     @classmethod
     def printc(cls, ansi_color: str, content: str):
-        print(f"{ansi_color}{content}{cls.ANSI_RESET}")
+        print(f"{cls.ansi_cmd_str(color)}{content}{cls.ansi_cmd_str(cls.ANSI_RESET)}")
         sys.stdout.flush()
 
     @classmethod
@@ -541,6 +547,11 @@ def mq_print_lock(machine: str) -> list[str]:
     return ['mq.sh', 'sem', '-info', machine]
 
 
+def run_cmd(cmd, run: Union[Run, Build], prev_output: str = None) -> int:
+    print_command(cmd_and_params)
+    return cmd_func(run, prev_output)
+
+
 def run_cmd_and_params(cmd_and_params: list) -> int, list[str]]:
     """If the command is a list[str], echo + run command with arguments, otherwise
     expect a function, and run that function on the supplied Run plus outputs from
@@ -564,6 +575,29 @@ def run_cmd_and_params(cmd_and_params: list) -> int, list[str]]:
     ret_code = process.wait()
     ret = SUCCESS if (0 == ret_code) else FAILURE
     return ret, lines
+
+def run_script_from_build_subdir(base_dir: str):
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    build_dir = f"build-{build.name}-{timestamp}"
+
+    os.chdir(base_dir)
+    try:
+        shutil.rmtree(build_dir)
+    except IOError:
+        pass
+    os.mkdir(build_dir)
+    os.chdir(build_dir)
+
+    # Run script
+    result = SUCCESS
+    for line in script:
+        builds.printc_command(cmd)
+        result, _ = builds.run_cmd_and_params(line)
+        if result != SUCCESS:
+            builds.printc(ANSI_RED, ">>> command failed, aborting.")
+            break
+
+    return result
 
 
 def summarise_junit(file_path: str) -> tuple[int, list[str]]:
@@ -659,6 +693,7 @@ def run_build_script(manifest_dir: str,
         result = SUCCESS
         for line in script:
             assert isinstance(line, list):
+            print_command(line)
             result, _ = run_cmd_and_params(line)
             if result != SUCCESS:
                 break
@@ -672,6 +707,7 @@ def run_build_script(manifest_dir: str,
         if result != SKIP:
             for line in final_script:
                 assert isinstance(line, list):
+                print_command(line)
                 r, _ = run_cmd_and_params(line)
                 if r == FAILURE:
                     # If a final script task fails, the overall task fails unless
@@ -960,6 +996,7 @@ def run_builds(builds: list, run_fun) -> int:
 
     results = {SUCCESS: [], FAILURE: [], SKIP: []}
     for build in builds:
+
         results[run_fun(manifest_dir, build)].append(build.name)
 
     no_failures = results[FAILURE] == []
