@@ -10,7 +10,9 @@ Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 
 import sys
 import os
+import shutil
 import argparse
+import datetime
 
 from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP
 from pprint import pprint
@@ -22,33 +24,57 @@ from pprint import pprint
 
 # The only thing this really has in common with a "Build" is the "name" field.
 
-def run_build(manifest_dir: str, build: builds.Build) -> int:
-    """Run one CAmkES VM test."""
+def run_build(build_list: builds.Build) -> int:
+    """Run one CAmkES VM build."""
 
-    plat = build.get_platform()
+    def setup(build)
+        plat = build.get_platform()
+        build.files = plat.image_names(build.get_mode(), "capdl-loader")
+        build.settings['CAMKES_VM_APP'] = build.app or build.name
+        # if vm_platform is set, the init-build.sh script expects a different platform name.
+        if build.vm_platform:
+            build.settings['PLATFORM'] = build.vm_platform
 
-    build.files = plat.image_names(build.get_mode(), "capdl-loader")
-    build.settings['CAMKES_VM_APP'] = build.app or build.name
+        # remove parameters from setting that CMake does not use and thus would
+        # raise a nasty warning
+        if 'BAMBOO' in build.settings:
+            del build.settings['BAMBOO']
+        if plat.arch == 'x86':
+            del build.settings['PLATFORM']
 
     # if vm_platform is set, the init-build.sh script expects a different platform name.
     if build.vm_platform:
         build.settings['PLATFORM'] = build.vm_platform
+        return [
+            ["../init-build.sh"] + build.settings_args(),
+            ["ninja"],
+            ["tar", "czf", f"../{build.name}-images.tar.gz", "images/"],
+        ]
 
-    # remove parameters from setting that CMake does not use and thus would
-    # raise a nasty warning
-    if 'BAMBOO' in build.settings:
-        del build.settings['BAMBOO']
-    if plat.arch == 'x86':
-        del build.settings['PLATFORM']
+
+    # run form the current working directory
+    base_dir = os.getcwd()
+    print()
+    sys.stdout.flush()
+
+    for build in build_list:
+        info = f"build {run.name}"
+        script = setup(build)
+        builds.printc_start(info)
+        ret = builds.run_script_from_build_subdir(base_dir, script)
+        builds.printc_end(info)
+
+    return ret
+
+
+def run_sim(manifest_dir: str, build: builds.Build) -> int:
+
+    if not plat.has_simulation or plat.name == 'PC99':
+        return 0
 
     script = [
-        ["../init-build.sh"] + build.settings_args(),
-        ["ninja"],
-        ["tar", "czf", f"../{build.name}-images.tar.gz", "images/"],
+        sim_script(build.success, failure=build.error
     ]
-
-    if plat.has_simulation and plat.name != 'PC99':
-        script.append(sim_script(build.success, failure=build.error))
 
     return builds.run_build_script(manifest_dir, build, script)
 
@@ -92,7 +118,7 @@ def main(params: list) -> int:
         return 0
 
     # perform args.build as default
-    return builds.run_builds(build_list, run_build)
+    return run_build(build_list)
 
 
 if __name__ == '__main__':
