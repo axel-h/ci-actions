@@ -489,13 +489,6 @@ SKIP = 2
 REPEAT = 3
 
 
-def success_from_bool(success: bool) -> int:
-    if success:
-        return SUCCESS
-    else:
-        return FAILURE
-
-
 def run_cmd(cmd, run: Union[Run, Build], prev_output: str = None) -> int:
     """If the command is a list[str], echo + run command with arguments, otherwise
     expect a function, and run that function on the supplied Run plus outputs from
@@ -515,9 +508,10 @@ def run_cmd(cmd, run: Union[Run, Build], prev_output: str = None) -> int:
             print(line)
             sys.stdout.flush()
             sys.stderr.flush()
-        ret = process.wait()
 
-        return success_from_bool(ret == 0), lines
+        ret_code = process.wait()
+        ret = SUCCESS if (0 == ret_code) else FAILURE
+        return ret, lines
     else:
         return cmd(run, prev_output)
 
@@ -535,7 +529,7 @@ def summarise_junit(file_path: str) -> tuple[int, list[str]]:
     xml = JUnitXml.fromfile(file_path)
     succeeded = xml.tests - (xml.failures + xml.errors + xml.skipped)
     success = xml.failures == 0 and xml.errors == 0
-
+    ret = SUCCESS if success else FAILURE
     col = ANSI_GREEN if success else ANSI_RED
 
     printc(col, "Test summary")
@@ -552,7 +546,7 @@ def summarise_junit(file_path: str) -> tuple[int, list[str]]:
     failures = {str(case.name) for case in xml
                 if any([isinstance(r, Failure) or isinstance(r, Error) for r in case.result])}
 
-    return success_from_bool(success), list(failures)
+    return ret, list(failures)
 
 
 # where junit results are left after sanitising:
