@@ -541,30 +541,29 @@ def mq_print_lock(machine: str) -> list[str]:
     return ['mq.sh', 'sem', '-info', machine]
 
 
-def run_cmd(cmd, run: Union[Run, Build], prev_output: str = None) -> int:
+def run_cmd_and_params(cmd_and_params: list) -> int, list[str]]:
     """If the command is a list[str], echo + run command with arguments, otherwise
     expect a function, and run that function on the supplied Run plus outputs from
     previous command."""
 
-    if isinstance(cmd, list):
-        AnsiPrinter.command(cmd)
-        # Print output as it arrives. Some of the build commands take too long to
-        # wait until all output is there. Keep stderr separate, but flush it.
-        process = subprocess.Popen(cmd, text=True, stdout=subprocess.PIPE,
-                                   stderr=sys.stderr, bufsize=1)
-        lines = []
-        for line in process.stdout:
-            line = line.rstrip()
-            lines.append(line)
-            print(line)
-            sys.stdout.flush()
-            sys.stderr.flush()
+    assert isinstance(cmd_and_params, list):
+    AnsiPrinter.command((cmd)
 
-        ret_code = process.wait()
-        ret = SUCCESS if (0 == ret_code) else FAILURE
-        return ret, lines
-    else:
-        return cmd(run, prev_output)
+    # Print output as it arrives. Some of the build commands take too long to
+    # wait until all output is there. Keep stderr separate, but flush it.
+    process = subprocess.Popen(cmd_and_params, text=True, stdout=subprocess.PIPE,
+                               stderr=sys.stderr, bufsize=1)
+    lines = []
+    for line in process.stdout:
+        line = line.rstrip()
+        lines.append(line)
+        print(line)
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+    ret_code = process.wait()
+    ret = SUCCESS if (0 == ret_code) else FAILURE
+    return ret, lines
 
 
 def summarise_junit(file_path: str) -> tuple[int, list[str]]:
@@ -658,9 +657,9 @@ def run_build_script(manifest_dir: str,
             script = script + [sanitise_junit]
 
         result = SUCCESS
-        output = None
         for line in script:
-            result, ouput = run_cmd(line, run, output)
+            assert isinstance(line, list):
+            result, _ = run_cmd_and_params(line)
             if result != SUCCESS:
                 break
 
@@ -672,7 +671,8 @@ def run_build_script(manifest_dir: str,
         # run final script tasks even in case of failure, but not for SKIP
         if result != SKIP:
             for line in final_script:
-                r, output = run_cmd(line, run, ouput)
+                assert isinstance(line, list):
+                r, _ = run_cmd_and_params(line)
                 if r == FAILURE:
                     # If a final script task fails, the overall task fails unless
                     # we have already decided to repeat. In either case we stop
