@@ -25,13 +25,15 @@ import time
 
 
 def adjust_build_settings(build: Build):
-    if 'BAMBOO' in build.settings:
-        del build.settings['BAMBOO']  # not used in this build, avoid warning
-
     # see discussion on https://github.com/seL4/sel4bench/pull/20 for hifive exclusion
     if build.is_smp() or build.get_platform().name == 'HIFIVE':
         build.settings['HARDWARE'] = 'FALSE'
         build.settings['FAULT'] = 'FALSE'
+
+    # remove parameters from setting that CMake does not use and thus would
+    # raise a nasty warning
+    if 'BAMBOO' in build.settings:
+        del build.settings['BAMBOO']
 
 
 def hw_build(manifest_dir: str, build: Build):

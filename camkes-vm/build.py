@@ -28,15 +28,17 @@ def run_build(manifest_dir: str, build: Build):
 
     build.files = plat.image_names(build.get_mode(), "capdl-loader")
     build.settings['CAMKES_VM_APP'] = build.app or build.name
-    if 'BAMBOO' in build.settings:
-        del build.settings['BAMBOO']    # not used in this test, avoid warning
-
-    if plat.arch == 'x86':
-        del build.settings['PLATFORM']  # not used for x86 in this test, avoid warning
 
     # if vm_platform is set, the init-build.sh script expects a different platform name.
     if build.vm_platform:
         build.settings['PLATFORM'] = build.vm_platform
+
+    # remove parameters from setting that CMake does not use and thus would
+    # raise a nasty warning
+    if 'BAMBOO' in build.settings:
+        del build.settings['BAMBOO']
+    if plat.arch == 'x86':
+        del build.settings['PLATFORM']
 
     script = [
         ["../init-build.sh"] + build.settings_args(),

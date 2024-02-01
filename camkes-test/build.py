@@ -48,11 +48,15 @@ def run_build(manifest_dir: str, build: Union[Build, SimBuild]):
         app = apps[build.app]
         build.files = build.get_platform().image_names(build.get_mode(), "capdl-loader")
         build.settings['CAMKES_APP'] = build.app
-        del build.settings['BAMBOO']  # not used in this test, avoid warning
 
         if app.get('has_cakeml'):
             build.settings['CAKEMLDIR'] = '/cakeml'
             build.settings['CAKEML_BIN'] = f"/cake-x64-{build.get_mode()}/cake"
+
+        # remove parameters from setting that CMake does not use and thus would
+        # raise a nasty warning
+        if 'BAMBOO' in build.settings:
+            del build.settings['BAMBOO']
 
         script = [
             ["../init-build.sh"] + build.settings_args(),
