@@ -83,10 +83,18 @@ class Build:
         if p.arch != "x86":
             self.settings[p.cmake_toolchain_setting(m)] = "TRUE"
         self.settings["PLATFORM"] = p.get_platform(m)
+
         # somewhat misnamed now; sets test output to parsable xml:
+        # See sel4test/settings.cmake, if Sel4testAllowSettingsOverride is not
+        # set then BAMBOO controls the setting for LibSel4TestPrintXML
         self.settings["BAMBOO"] = "TRUE"
+
         self.files = p.image_names(m, self.image_base_name)
+
         if self.req == 'sim':
+            # See sel4test/settings.cmake, if Sel4testAllowSettingsOverride is
+            # bot set then SIMULATION controls the settings for
+            # Sel4testSimulation and Sel4testHaveCache.
             self.settings["SIMULATION"] = "TRUE"
 
     def get_platform(self) -> Platform:
