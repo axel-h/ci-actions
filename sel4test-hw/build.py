@@ -57,7 +57,7 @@ def build_filter(build: Build) -> bool:
         return False
 
     if plat.arch == 'arm':
-        # Bamboo says: don't build release for hikey when in aarch64 arm_hyp mode
+        # ToDo: why is release for hikey in aarch64 arm_hyp mode is not supported
         if build.is_hyp() and build.get_mode() == 64 and build.is_release() and \
            plat.name == 'HIKEY':
             return False
@@ -86,7 +86,7 @@ def build_filter(build: Build) -> bool:
             return False
 
     if plat.arch == 'x86':
-        # Bamboo config says no VTX for SMP or verification
+        # ToDo: explant why we don't do VTX for SMP or verification
         if build.is_hyp() and (build.is_smp() or build.is_verification()):
             return False
 
