@@ -27,7 +27,10 @@ def run_build(manifest_dir: str, build: Build):
     plat = build.get_platform()
 
     build.files = plat.image_names(build.get_mode(), "capdl-loader")
-    del build.settings['BAMBOO']    # not used in this test, avoid warning
+
+    # remove parameters from setting that CMake does not use and thus would
+    # raise a nasty warning
+    del build.settings['BAMBOO']
 
     script = [
         ["../init-build.sh"] + build.settings_args(),
