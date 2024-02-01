@@ -18,7 +18,10 @@ import sys
 
 def adjust_build(build: Build):
     build.files = build.get_platform().image_names(build.get_mode(), "roottask")
-    del build.settings['BAMBOO']  # not used in this test, avoid warning
+    # remove parameters from setting that CMake does not use and thus would
+    # raise a nasty warning
+    if 'BAMBOO' in build.settings:
+        del build.settings['BAMBOO']
 
 
 def run_build(manifest_dir: str, build: Build):
