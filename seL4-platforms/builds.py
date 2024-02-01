@@ -35,13 +35,72 @@ __all__ = [
 # where to expect jUnit results by default
 junit_results = 'results.xml'
 
-# colour codes
-ANSI_RESET = "\033[0m"
-ANSI_RED = "\033[31;1m"
-ANSI_GREEN = "\033[32m"
-ANSI_YELLOW = "\033[33m"
-ANSI_WHITE = "\033[37m"
-ANSI_BOLD = "\033[1m"
+# return codes for a test run or single step of a run
+FAILURE = 0
+SUCCESS = 1
+SKIP = 2
+REPEAT = 3
+
+
+class AnsiPrinter:
+    # colour codes
+    ANSI_RESET = "\033[0m"
+    ANSI_BOLD = "\033[1m"
+    #ANSI_BLACK = "\033[30m"
+    ANSI_RED = "\033[31;1m"
+    ANSI_GREEN = "\033[32m"
+    ANSI_YELLOW = "\033[33m"
+    ANSI_BLUE = "\033[34m"
+    ANSI_MAGENTA = "\033[35m"
+    ANSI_CYAN = "\033[36m"
+    ANSI_WHITE = "\033[37m"
+
+    @classmethod
+    def printc(cls, ansi_color: str, content: str):
+        print(f"{ansi_color}{content}{cls.ANSI_RESET}")
+        sys.stdout.flush()
+
+    @classmethod
+    def error(cls, content: str):
+        cls.printc(cls.ANSI_RED, content)
+
+    @classmethod
+    def warn(cls, content: str):
+        cls.printc(cls.ANSI_YELLOW, content)
+
+    @classmethod
+    def skip(cls, content: str):
+        cls.printc(cls.ANSI_YELLOW, content)
+
+    @classmethod
+    def ok(cls, content: str):
+        cls.printc(cls.ANSI_GREEN, content)
+
+    @classmethod
+    def command(cls, cmd: Union[str, list]):
+        cmd = cmd if isinstance(cmd, str) \
+            else " ".join(cmd) if isinstance(cmd, list) \
+            else str(cmd)
+        cls.printc(cls.ANSI_YELLOW, f"+++ {cmd}")
+
+    @classmethod
+    def step_start(cls, step_type: str, step_name: str):
+        print(f"::group::{step_name}")
+        cls.printc(cls.ANSI_BOLD,
+                   f"-----------[ start {step_type} {step_name} ]-----------")
+
+    @classmethod
+    def step_end(cls, step_type: str, step_name: str, result: int):
+        cls.printc(cls.ANSI_BOLD,
+                   f"-----------[ end {step_type} {step_name} ]-----------")
+        print("::endgroup::")
+        # print status after group, so that it's easier to scan for failed jobs
+        if result == SUCCESS:
+            cls.ok(f"{step_name} succeeded")
+        elif result == SKIP:
+            cls.skip(f"{step_name} skipped")
+        elif result == FAILURE:
+            cls.error(f"{step_name} FAILED")
 
 
 class Build:
@@ -365,7 +424,7 @@ def repeat_on_boot_failure(log: list[str]) -> int:
         for pat in boot_fail_patterns:
             for i in range(len(log)+1-len(pat)):
                 if all(p in log[i+j] for j, p in enumerate(pat)):
-                    printc(ANSI_RED, "Boot failure detected.")
+                    AnsiPrinter.error("Boot failure detected.")
                     time.sleep(10)
                     return REPEAT, None
     else:
@@ -482,21 +541,13 @@ def mq_print_lock(machine: str) -> list[str]:
     return ['mq.sh', 'sem', '-info', machine]
 
 
-# return codes for a test run or single step of a run
-FAILURE = 0
-SUCCESS = 1
-SKIP = 2
-REPEAT = 3
-
-
 def run_cmd(cmd, run: Union[Run, Build], prev_output: str = None) -> int:
     """If the command is a list[str], echo + run command with arguments, otherwise
     expect a function, and run that function on the supplied Run plus outputs from
     previous command."""
 
     if isinstance(cmd, list):
-        printc(ANSI_YELLOW, "+++ " + " ".join(cmd))
-        sys.stdout.flush()
+        AnsiPrinter.command(cmd)
         # Print output as it arrives. Some of the build commands take too long to
         # wait until all output is there. Keep stderr separate, but flush it.
         process = subprocess.Popen(cmd, text=True, stdout=subprocess.PIPE,
@@ -516,10 +567,6 @@ def run_cmd(cmd, run: Union[Run, Build], prev_output: str = None) -> int:
         return cmd(run, prev_output)
 
 
-def printc(color: str, content: str):
-    print(color + content + ANSI_RESET)
-
-
 def summarise_junit(file_path: str) -> tuple[int, list[str]]:
     """Parse jUnit output and show a summary.
 
@@ -530,17 +577,18 @@ def summarise_junit(file_path: str) -> tuple[int, list[str]]:
     succeeded = xml.tests - (xml.failures + xml.errors + xml.skipped)
     success = xml.failures == 0 and xml.errors == 0
     ret = SUCCESS if success else FAILURE
-    col = ANSI_GREEN if success else ANSI_RED
+    col = AnsiPrinter.ANSI_GREEN if success else AnsiPrinter.ANSI_RED
 
-    printc(col, "Test summary")
-    printc(col, "------------")
-    printc(ANSI_GREEN if success else "", f"succeeded: {succeeded}/{xml.tests}")
+    AnsiPrinter.printc(col, "Test summary")
+    AnsiPrinter.printc(col, "------------")
+    AnsiPrinter.printc(AnsiPrinter.ANSI_GREEN if success else "",
+                       f"succeeded: {succeeded}/{xml.tests}")
     if xml.skipped > 0:
-        printc(ANSI_YELLOW, f"skipped:   {xml.skipped}")
+        AnsiPrinter.skip(f"skipped:   {xml.skipped}")
     if xml.failures > 0:
-        printc(ANSI_RED, f"failures:  {xml.failures}")
+        AnsiPrinter.error(f"failures:  {xml.failures}")
     if xml.errors > 0:
-        printc(ANSI_RED, f"errors:    {xml.errors}")
+        AnsiPrinter.error(f"errors:    {xml.errors}")
     print()
 
     failures = {str(case.name) for case in xml
@@ -590,9 +638,7 @@ def run_build_script(manifest_dir: str,
     result = SKIP
     tries_left = 3
 
-    print(f"::group::{run.name}")
-    printc(ANSI_BOLD, f"-----------[ start test {run.name} ]-----------")
-    sys.stdout.flush()
+    AnsiPrinter.step_start("test", run.name)
 
     while tries_left > 0:
         tries_left -= 1
@@ -619,9 +665,9 @@ def run_build_script(manifest_dir: str,
                 break
 
         if result == FAILURE:
-            printc(ANSI_RED, ">>> command failed, aborting.")
+            AnsiPrinter.error(">>> command failed, aborting.")
         elif result == SKIP:
-            printc(ANSI_YELLOW, ">>> skipping this test.")
+            AnsiPrinter.skip(">>> skipping this test.")
 
         # run final script tasks even in case of failure, but not for SKIP
         if result != SKIP:
@@ -644,36 +690,32 @@ def run_build_script(manifest_dir: str,
             try:
                 result, failures = summarise_junit(junit_file)
             except IOError:
-                printc(ANSI_RED, f"Error reading {junit_file}")
+                AnsiPrinter.error(f"Error reading {junit_file}")
                 result = FAILURE
             except:
-                printc(ANSI_RED, f"Error parsing {junit_file}")
+                AnsiPrinter.error(f"Error parsing {junit_file}")
                 result = FAILURE
 
         if result == REPEAT and tries_left > 0:
-            printc(ANSI_YELLOW, ">>> command failed, repeating test.")
+            AnsiPrinter.warn(">>> command failed, repeating test.")
         elif result == REPEAT and tries_left == 0:
             result = FAILURE
-            printc(ANSI_RED, ">>> command failed, no tries left.")
+            AnsiPrinter.error(">>> command failed, no tries left.")
 
         if result != REPEAT:
             break
 
-    printc(ANSI_BOLD, f"-----------[ end test {run.name} ]-----------")
-    print("::endgroup::")
+    AnsiPrinter.step_end("test", run.name, result)
     # after group, so that it's easier to scan for failed jobs
-    if result == SUCCESS:
-        printc(ANSI_GREEN, f"{run.name} succeeded")
-    elif result == SKIP:
-        printc(ANSI_YELLOW, f"{run.name} skipped")
-    elif result == FAILURE:
-        printc(ANSI_RED, f"{run.name} FAILED")
+    if result == FAILURE:
         if failures != []:
             max_print = 10
-            printc(ANSI_RED, "Failed cases: " + ", ".join(failures[:max_print]) +
-                   (" ..." if len(failures) > max_print else ""))
+            AnsiPrinter.error("Failed cases: " + ", ".join(failures[:max_print]) +
+                              (" ..." if len(failures) > max_print else ""))
+    elif result in [SUCCESS, SKIP]:
+        pass  # AnsiPrinter.step_end(() has printed everything
     else:
-        printc(ANSI_RED, f"{run.name} with REPEAT at end of test, we should not see this.")
+        AnsiPrinter.error(f"{run.name} with REPEAT at end of test, we should not see this.")
     print("")
     sys.stdout.flush()
 
@@ -921,12 +963,13 @@ def run_builds(builds: list, run_fun) -> int:
         results[run_fun(manifest_dir, build)].append(build.name)
 
     no_failures = results[FAILURE] == []
-    printc(ANSI_GREEN if no_failures else "", "Successful tests: " + ", ".join(results[SUCCESS]))
+    AnsiPrinter.printc(AnsiPrinter.ANSI_GREEN if no_failures else "",
+                       "Successful tests: " + ", ".join(results[SUCCESS]))
     if results[SKIP] != []:
         print()
-        printc(ANSI_YELLOW, "SKIPPED tests: " + ", ".join(results[SKIP]))
+        AnsiPrinter.skip("SKIPPED tests: " + ", ".join(results[SKIP]))
     if results[FAILURE] != []:
         print()
-        printc(ANSI_RED, "FAILED tests: " + ", ".join(results[FAILURE]))
+        AnsiPrinter.error("FAILED tests: " + ", ".join(results[FAILURE]))
 
     return 0 if no_failures else 1
