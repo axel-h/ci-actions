@@ -17,6 +17,15 @@ on:
       concurrency_group:
         required: true
         type: string
+      workflow_call_repo:
+        required: true
+        type: string
+      workflow_call_branch:
+        required: true
+        type: string
+      workflow_call_workflow:
+        required: true
+        type: string
 
 # intended to run on
 #  pull_request_target:
