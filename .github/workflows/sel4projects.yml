@@ -6,6 +6,25 @@ name: sel4-projects
 
 on:
   workflow_call:
+    inputs:
+      projects:
+        type: string
+        required: true
+      labels:
+        required: false
+        type: string
+      concurrency_group:
+        required: true
+        type: string
+      workflow_call_repo:
+        required: true
+        type: string
+      workflow_call_branch:
+        required: true
+        type: string
+      workflow_call_workflow:
+        required: true
+        type: string
 
 # intended to run on
 #  pull_request_target:
@@ -30,14 +49,38 @@ jobs:
                       (github.event.label.name == 'hw-bench')) ||
                      ((github.event.action != 'labeled') &&
                       contains(github.event.pull_request.labels.*.name, 'hw-bench')) }}
+#sim: false
+# echo "prj sim:" ${{ fromJSON(format('[{0}]', inputs.projects)) }}
+
     runs-on: ubuntu-latest
     steps:
     - env:
         inputs_JSON: ${{ toJSON(inputs) }}
+        #not allowd; inputs2_JSON: ${{ toJSON(fromJSON('[a,b,c]')) }}
         github_JSON: ${{ toJSON(github) }}
       run: |
         echo "workflow:" ${{ github.workflow_ref }}
+        echo "inputs2_JSON: ${inputs2_JSON}"
+        echo "prj sim:" ${{ inputs.projects }}
+        echo "prj sim:" "${{ format('[{0}]', inputs.projects) }}"
 
+
+#        echo "prj sim:" ${{ contains(fromJSON(format('[{0}]', inputs.projects)), 'sim') }}
+#
+#        inputs2_JSON: ${{ toJSON(fromJSON(format('[{0}]', inputs.projects))) }}
+#
+#        echo "prj sel4test:" ${{ contains(fromJSON(format('[{0}]', inputs.projects)), 'sel4test') }}
+#        echo "prj sel4bench:" ${{ contains(fromJSON(format('[{0}]', inputs.projects)), 'sel4bench') }}
+#        echo "prj foo: " ${{ contains(fromJSON(format('[{0}]', inputs.projects)), 'foo') }}
+#
+#  sim:
+#    name: Sim
+#    needs: [check]
+#    if: ${{ needs.check.outputs.sim }}
+#    concurrency:
+#      group: ${{ github.workflow }}-sim-pr-${{ github.event.number }}
+#      cancel-in-progress: true
+#    uses: axel-h/ci-actions/.github/workflows/sel4test-sim.yml@patch-axel-7
 
   sel4test:
     name: sel4test
