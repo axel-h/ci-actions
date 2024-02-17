@@ -8,6 +8,13 @@ name: seL4Bench-HW
 
 on:
   workflow_call:
+    inputs:
+      labels:
+        required: false
+        type: string
+      concurrency_group:
+        required: true
+        type: string
 
 # intended to run on
 #  pull_request_target:
@@ -17,17 +24,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ inputs.concurrency_group }}
+  cancel-in-progress: true
+
 jobs:
   code:
     name: Freeze Code
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request_target' &&
-            (
-               github.event.action != 'labeled' &&
-                contains(github.event.pull_request.labels.*.name, 'hw-bench') ||
-               github.event.action == 'labeled' &&
-                github.event.label.name == 'hw-bench'
-            ) }}
+    if: ${{  contains(inputs.labels, 'hw-bench') }}
     outputs:
       xml: ${{ steps.repo.outputs.xml }}
     steps:
@@ -42,11 +47,6 @@ jobs:
     name: Build
     needs: code
     runs-on: ubuntu-latest
-    # To reduce the load on GitHub runner numbers and machine queue we cancel
-    # any older runs of this workflow for the current PR.
-    concurrency:
-      group: ${{ github.workflow }}-sel4bench-build-pr-${{ github.event.number }}-${{ strategy.job-index }}
-      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
@@ -68,9 +68,6 @@ jobs:
     if: ${{ github.repository_owner == 'seL4' }}
     runs-on: ubuntu-latest
     needs: [build]
-    concurrency:
-      group: ${{ github.workflow }}-sel4bench-hw-run-pr-${{ github.event.number }}-${{ strategy.job-index }}
-      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:

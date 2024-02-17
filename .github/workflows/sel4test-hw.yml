@@ -10,6 +10,13 @@ name: seL4Test-HW
 
 on:
   workflow_call:
+    inputs:
+      labels:
+        required: false
+        type: string
+      concurrency_group:
+        required: true
+        type: string
 
 # intended to run on
 #  pull_request_target:
@@ -20,19 +27,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ inputs.concurrency_group }}
+  cancel-in-progress: true
+
 jobs:
   code:
     name: Freeze Code
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request_target' &&
-            (
-              github.event.action != 'labeled' &&
-              (contains(github.event.pull_request.labels.*.name, 'hw-build') ||
-               contains(github.event.pull_request.labels.*.name, 'hw-test')) ||
-              github.event.action == 'labeled' &&
-              (github.event.label.name == 'hw-build' ||
-               github.event.label.name == 'hw-test')
-            ) }}
+    if: ${{ contains(inputs.labels, 'hw-build') ||
+            contains(inputs.labels, 'hw-test') }}
     outputs:
       xml: ${{ steps.repo.outputs.xml }}
     steps:
@@ -47,11 +51,6 @@ jobs:
     name: HW Build
     runs-on: ubuntu-latest
     needs: code
-    # To reduce the load (especially on the machine queue) we cancel any older
-    # runs of this workflow for the current PR.
-    concurrency:
-      group: ${{ github.workflow }}-sel4test-build-pr-${{ github.event.number }}-${{ strategy.job-index }}
-      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
@@ -91,10 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: the_matrix
     if: ${{ github.repository_owner == 'seL4' &&
-            contains(github.event.pull_request.labels.*.name, 'hw-test') }}
-    concurrency:
-      group: ${{ github.workflow }}-sel4test-hw-run-pr-${{ github.event.number }}-${{ strategy.job-index }}
-      cancel-in-progress: true
+            contains(inputs.labels, 'hw-test') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.the_matrix.outputs.matrix) }}
