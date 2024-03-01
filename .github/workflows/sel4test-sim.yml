@@ -54,7 +54,7 @@ jobs:
         march: [armv7a, armv8a, nehalem, rv32imac, rv64imac]
         compiler: [gcc, clang]
     steps:
-    - uses: seL4/ci-actions/sel4test-sim@master
+    - uses: ${{ inputs.workflow_call_repo }}/ci-actions/sel4test-sim@${{ inputs.workflow_call_branch }}
       with:
         march: ${{ matrix.march }}
         compiler: ${{ matrix.compiler }}

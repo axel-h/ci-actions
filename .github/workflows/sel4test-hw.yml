@@ -64,7 +64,7 @@ jobs:
       xml: ${{ steps.repo.outputs.xml }}
     steps:
     - id: repo
-      uses: seL4/ci-actions/repo-checkout@master
+      uses: ${{ inputs.workflow_call_repo }}/repo-checkout@${{ inputs.workflow_call_branch }}
       with:
         manifest_repo: sel4test-manifest
         manifest: master.xml
@@ -83,7 +83,7 @@ jobs:
     steps:
     - run: echo ${{ github.workflow }}-sel4test-build-pr-${{ github.event.number }}-${{ strategy.job-index }}
     - name: Build
-      uses: seL4/ci-actions/sel4test-hw@master
+      uses: ${{ inputs.workflow_call_repo }}/sel4test-hw@${{ inputs.workflow_call_branch }}
       with:
         xml: ${{ needs.code.outputs.xml }}
         march: ${{ matrix.march }}
@@ -107,7 +107,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
     - id: matrix
-      uses: seL4/ci-actions/sel4test-hw-matrix@master
+      uses: ${{ inputs.workflow_call_repo }}/sel4test-hw-matrix@${{ inputs.workflow_call_branch }}
 
   hw-run-debug:
     name: HW Run Debug
@@ -144,7 +144,7 @@ jobs:
         with:
           name: images-sel4test-${{ matrix.march }}-${{ matrix.compiler }}
       - name: Run
-        uses: seL4/ci-actions/sel4test-hw-run@master
+        uses: ${{ inputs.workflow_call_repo }}/sel4test-hw-run@${{ inputs.workflow_call_branch }}
         with:
           platform: ${{ matrix.platform }}
           compiler: ${{ matrix.compiler }}
