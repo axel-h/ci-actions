@@ -32,7 +32,12 @@ jobs:
                       contains(github.event.pull_request.labels.*.name, 'hw-bench')) }}
     runs-on: ubuntu-latest
     steps:
-    - run: echo "dummy"
+    - env:
+        inputs_JSON: ${{ toJSON(inputs) }}
+        github_JSON: ${{ toJSON(github) }}
+      run: |
+        echo "workflow:" ${{ github.workflow_ref }}
+
 
   sel4test:
     name: sel4test
