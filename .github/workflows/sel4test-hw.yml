@@ -32,6 +32,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo ${{ github.workspace }}
+    - env:
+        inputs_JSON: ${{ toJSON(inputs) }}
+        github_JSON: ${{ toJSON(github) }}
+      run: echo ${GITHUB_WORKSPACE}
+    - run: ls -la /home/runner
+    - run: ls -la /home/runner/runners
+    - run: ls -la /home/runner/work
+    - run: ls -la /home/runner/work/_PipelineMapping/axel-h
+    - run: ls -la /home/runner/work/_temp
+
   code:
     name: Freeze Code
     runs-on: ubuntu-latest
@@ -58,6 +72,7 @@ jobs:
         march: [armv7a, armv8a, nehalem, rv64imac]
         compiler: [gcc, clang]
     steps:
+    - run: echo ${{ github.workflow }}-sel4test-build-pr-${{ github.event.number }}-${{ strategy.job-index }}
     - name: Build
       uses: seL4/ci-actions/sel4test-hw@master
       with:
@@ -85,6 +100,20 @@ jobs:
     - id: matrix
       uses: seL4/ci-actions/sel4test-hw-matrix@master
 
+  hw-run-debug:
+    name: HW Run Debug
+    runs-on: ubuntu-latest
+    needs: [code, hw-build]
+    steps:
+      - run: echo ${{ needs.code.outputs.matrix }}
+
+  hw-run-debug2:
+    name: HW Run Debug
+    runs-on: ubuntu-latest
+    needs: [hw-build]
+    steps:
+      - run: echo ${{ needs.code.outputs.matrix }}
+
   hw-run:
     name: HW Run
     runs-on: ubuntu-latest
@@ -95,6 +124,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.the_matrix.outputs.matrix) }}
     steps:
+      - run: echo ${{ github.workflow }}-sel4test-hw-run-pr-${{ github.event.number }}-${{ strategy.job-index }}
       - name: Get machine queue
         uses: actions/checkout@v4
         with:
