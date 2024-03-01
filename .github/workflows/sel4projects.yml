@@ -1,0 +1,59 @@
+# Copyright 2024, Axel Heider
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+name: sel4-projects
+
+on:
+  workflow_call:
+
+# intended to run on
+#  pull_request_target:
+#    types: [opened, reopened, synchronize, labeled]
+# needs PR target for secrets access; guard by requiring label
+
+# downgrade permissions to read-only as you would have in a standard PR action
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: ${{ github.event_name == 'pull_request_target' }}
+    outputs:
+      sel4test: ${{ ((github.event.action != 'labeled') &&
+                     (contains(github.event.pull_request.labels.*.name, 'hw-build') ||
+                      contains(github.event.pull_request.labels.*.name, 'hw-test'))) ||
+                    ((github.event.action == 'labeled') &&
+                     ((github.event.label.name == 'hw-build') ||
+                      (github.event.label.name == 'hw-test'))) }}
+      sel4bench: ${{ ((github.event.action == 'labeled') &&
+                      (github.event.label.name == 'hw-bench')) ||
+                     ((github.event.action != 'labeled') &&
+                      contains(github.event.pull_request.labels.*.name, 'hw-bench')) }}
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo "dummy"
+
+  sel4test:
+    name: sel4test
+    needs: [check]
+    if: ${{ needs.check.outputs.sel4test }}
+    concurrency:
+      group: ${{ github.workflow }}-sel4test-pr-${{ github.event.number }}
+      cancel-in-progress: true
+    uses: axel-h/ci-actions/.github/workflows/sel4test-hw.yml@patch-axel-7
+    with:
+      hw: ${{ contains(github.event.pull_request.labels.*.name, 'hw-build') }}
+    secrets: inherit
+
+  sel4bench:
+    name: sel4bench
+    needs: [check]
+    if: ${{ needs.check.outputs.sel4bench }}
+    concurrency:
+      group: ${{ github.workflow }}-sel4bench-pr-${{ github.event.number }}
+      cancel-in-progress: true
+    uses: axel-h/ci-actions/.github/workflows/sel4bench-hw.yml@patch-axel-7
+    with:
+      hw: ${{ contains(github.event.pull_request.labels.*.name, 'hw-bench') }}
+    secrets: inherit
