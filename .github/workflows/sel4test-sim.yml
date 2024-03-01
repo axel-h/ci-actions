@@ -12,6 +12,21 @@ on:
   workflow_call:
 
 jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+    - env:
+        github_JSON: ${{ toJSON(github) }}
+      run: |
+        echo ${{ github.workspace }}
+        echo ${{ github.workflow }}-sel4sim-pr-${{ github.event.number }}
+        echo ${GITHUB_WORKSPACE}
+        ls -la /home/runner
+        ls -la /home/runner/runners
+        ls -la /home/runner/work
+        ls -la /home/runner/work/_PipelineMapping/axel-h
+        ls -la /home/runner/work/_temp
+
   sim:
     name: Simulation
     runs-on: ubuntu-latest
