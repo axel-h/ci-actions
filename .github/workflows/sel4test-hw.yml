@@ -10,11 +10,11 @@ name: seL4Test-HW
 
 on:
   workflow_call:
-
-# intended to run on
-#  pull_request_target:
-#    types: [opened, reopened, synchronize, labeled]
-# needs PR target for secrets access; guard by requiring label
+    inputs:
+      hw:
+        type: boolean
+        required: false
+        default: false
 
 # downgrade permissions to read-only as you would have in a standard PR action
 permissions:
@@ -24,15 +24,6 @@ jobs:
   code:
     name: Freeze Code
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request_target' &&
-            (
-              github.event.action != 'labeled' &&
-              (contains(github.event.pull_request.labels.*.name, 'hw-build') ||
-               contains(github.event.pull_request.labels.*.name, 'hw-test')) ||
-              github.event.action == 'labeled' &&
-              (github.event.label.name == 'hw-build' ||
-               github.event.label.name == 'hw-test')
-            ) }}
     outputs:
       xml: ${{ steps.repo.outputs.xml }}
     steps:
@@ -47,11 +38,6 @@ jobs:
     name: HW Build
     runs-on: ubuntu-latest
     needs: code
-    # To reduce the load (especially on the machine queue) we cancel any older
-    # runs of this workflow for the current PR.
-    concurrency:
-      group: ${{ github.workflow }}-sel4test-build-pr-${{ github.event.number }}-${{ strategy.job-index }}
-      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
@@ -90,17 +76,7 @@ jobs:
     name: HW Run
     runs-on: ubuntu-latest
     needs: the_matrix
-    if: ${{ github.repository_owner == 'seL4' &&
-            (github.event_name == 'push' ||
-             github.event_name == 'pull_request_target' &&
-               github.event.action != 'labeled' &&
-               contains(github.event.pull_request.labels.*.name, 'hw-test') ||
-             github.event_name == 'pull_request_target' &&
-               github.event.action == 'labeled' &&
-               github.event.label.name == 'hw-test') }}
-    concurrency:
-      group: ${{ github.workflow }}-sel4test-hw-run-pr-${{ github.event.number }}-${{ strategy.job-index }}
-      cancel-in-progress: true
+    if: ${{ github.repository_owner == 'seL4' && inputs.hw }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.the_matrix.outputs.matrix) }}
