@@ -20,6 +20,22 @@ permissions:
   contents: read
 
 jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+    - env:
+        inputs_JSON: ${{ toJSON(inputs) }}
+        github_JSON: ${{ toJSON(github) }}
+      run: |
+        echo ${{ github.workspace }}
+        echo ${GITHUB_WORKSPACE}
+        echo "workflow:" ${{ github.workflow_ref }}
+        ls -la /home/runner
+        ls -la /home/runner/runners
+        ls -la /home/runner/work
+        ls -la /home/runner/work/_PipelineMapping/axel-h
+        ls -la /home/runner/work/_temp
+
   code:
     name: Freeze Code
     runs-on: ubuntu-latest
@@ -42,6 +58,7 @@ jobs:
       matrix:
         march: [armv7a, armv8a, nehalem, rv64imac]
     steps:
+    - run: echo ${{ github.workflow }}-sel4bench-build-pr-${{ github.event.number }}-${{ strategy.job-index }}
     - name: Build
       uses: seL4/ci-actions/sel4bench@master
       with:
@@ -76,6 +93,7 @@ jobs:
           - platform: pc99
             req: haswell3
     steps:
+      - run: echo ${{ github.workflow }}-sel4bench-hw-run-pr-${{ github.event.number }}-${{ strategy.job-index }}
       - name: Get machine queue
         uses: actions/checkout@v4
         with:
