@@ -39,6 +39,7 @@ use one or more of the following:
 - `arch`: comma separated list of architecture to filter on, e.g `arm, riscv`.
 - `march`: comma separated list of `march` flags, e.g. `armv7a, nehalem`
 - `mode`: one of `{32, 64}`
+- `compiler`: one of `{gcc, clang}`
 - `platform`: platform name, e.g. `pc99`
 - `req`: machine name, e.g. `haswell3`
 
