@@ -18,6 +18,7 @@ variants:
     smp: ['', SMP]
     mcs: ['', MCS]
     mode: [32, 64]
+    compiler: [gcc, clang]
 
 # builds in addition to the variant matrix above
 more_builds:
