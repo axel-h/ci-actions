@@ -62,7 +62,7 @@ class Build:
         self.settings = {}
         self.timeout = 900
         self.no_hw_test = False
-        self.image_base_name = "sel4test-driver"
+        self.image_base_name = None
         [self.name] = entries.keys()
         attribs = copy.deepcopy(default)
         # this potentially overwrites the default settings dict, we restore it later
@@ -107,6 +107,12 @@ class Build:
 
         # somewhat misnamed now; sets test output to parsable xml:
         self.settings["BAMBOO"] = "TRUE"
+        # Seems we have another naming quirk with self.image_base_name, because
+        # the only usage is passing it here as root task name. The actual root
+        # task name is set in the build system and becomes a part of the final
+        # image file name. However, the actual way this name is created differs
+        # between ARM/RISC-V and x86, so we have call a helper function here to
+        # give us the file name(s).
         self.files = p.image_names(m, self.image_base_name)
         if self.req == 'sim':
             self.settings["SIMULATION"] = "TRUE"
