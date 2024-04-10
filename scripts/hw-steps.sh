@@ -16,10 +16,7 @@ export PATH="$(pwd)/machine_queue":$PATH
 . setup-hw-ssh.sh
 
 # for junit output prep:
-mkdir projects
-cd projects
-git clone --depth 1 https://github.com/seL4/seL4_libs.git
-cd ..
+git clone --depth 1 https://github.com/seL4/seL4_libs.git projects
 
 export ACTION_DIR="${SCRIPTS}/.."
 
