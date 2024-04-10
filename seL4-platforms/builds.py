@@ -62,7 +62,7 @@ class Build:
         self.settings = {}
         self.timeout = 900
         self.no_hw_test = False
-        self.image_base_name = "sel4test-driver"
+        self.image_base_name = None
         [self.name] = entries.keys()
         attribs = copy.deepcopy(default)
         # this potentially overwrites the default settings dict, we restore it later
@@ -200,6 +200,8 @@ class Build:
         return self.settings.get('DOMAINS') is not None
 
     def validate(self):
+        if not self.image_base_name:
+            raise ValidationException("Build: no image base name")
         if not self.get_mode():
             raise ValidationException("Build: no unique mode")
         if not self.get_platform():
