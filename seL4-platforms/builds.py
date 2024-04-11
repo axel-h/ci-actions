@@ -130,10 +130,17 @@ class Build:
 
     def get_mode(self) -> Optional[int]:
         """Return the mode (32/64) for this build; taken from platform if not defined"""
-        if not self.mode and self.get_platform().get_mode():
-            return self.get_platform().get_mode()
-        else:
+        if self.mode:
             return self.mode
+        mode = self.get_platform().get_mode():
+        if mode:
+            return mode
+        # Ideally, we can determine the mode from the exact architecture, which
+        # the build system calls 'sel4arch' - so the long term goal should be
+        # using this. Until then, we have to live with some quirks from hisotry
+        # and expect all platforms to have a 'mode'. However, this can be unset
+        # and thus we can return None here. The caller must handle this.
+        return None
 
     def settings_args(self):
         """Return the build settings as an argument list [-Dkey=val]"""
