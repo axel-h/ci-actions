@@ -10,11 +10,11 @@ modes: [32, 64]
 architectures: [x86, arm, riscv]
 
 # platform-key:
+#     platform: name; required
 #     arch: one of architectures; required
 #     modes: list of modes; non-empty; required
 #     smp: list of modes; optional (null = empty)
 #     aarch_hyp: list of modes; optional (null = empty)
-#     platform: name; required
 #     image_platform: name; optional
 #     has_simulation: boolean; optional; (null = false); platform has a simulation
 #     march: string; optional
@@ -24,46 +24,46 @@ architectures: [x86, arm, riscv]
 
 platforms:
   SPIKE32:
+    platform: spike
     arch: riscv
     modes: [32]
-    platform: spike
     has_simulation: true
     march: rv32imac
     no_hw_test: true
     no_hw_build: true
 
   SPIKE64:
+    platform: spike
     arch: riscv
     modes: [64]
-    platform: spike
     has_simulation: true
     march: rv64imac
     no_hw_test: true
     no_hw_build: true
 
   RISCVVIRT64:
+    platform: qemu-riscv-virt
     arch: riscv
     modes: [64]
-    platform: qemu-riscv-virt
     has_simulation: true
     march: rv64imac
     no_hw_test: true
     no_hw_build: true
 
   RISCVVIRT32:
+    platform: qemu-riscv-virt
     arch: riscv
     modes: [32]
-    platform: qemu-riscv-virt
     has_simulation: true
     march: rv32imac
     no_hw_test: true
     no_hw_build: true
 
   HIFIVE:
+    platform: hifive
     arch: riscv
     modes: [64]
     smp: [64]
-    platform: hifive
     req: [hifive] # , hifive1]
     march: rv64imac
 
@@ -76,63 +76,63 @@ platforms:
     no_hw_test: true
 
   SABRE:
+    platform: sabre
     arch: arm
     modes: [32]
     smp: [32]
-    platform: sabre
     image_platform: imx6
     req: [sabre, sabre4, sabre2]
     has_simulation: true
     march: armv7a
 
   ROCKPRO64:
+    platform: rockpro64
     arch: arm
     modes: [64]
-    platform: rockpro64
     req: [rockpro64a]
     march: armv8a
     no_hw_test: true
 
   QUARTZ64:
+    platform: quartz64
     arch: arm
     modes: [64]
-    platform: quartz64
     march: armv8a
     no_hw_test: true
 
   ARMVIRT32:
+    platform: qemu-arm-virt
     arch: arm
     modes: [32]
-    platform: qemu-arm-virt
     has_simulation: true
     march: armv7a # Cortex-A15 is emulated by default
     no_hw_test: true
     no_hw_build: true
 
   ARMVIRT64:
+    platform: qemu-arm-virt
     arch: arm
     modes: [64]
-    platform: qemu-arm-virt
     has_simulation: true
     march: armv8a # Cortex-A53 is emulated by default
     no_hw_test: true
     no_hw_build: true
 
   IMX8MQ_EVK:
+    platform: imx8mq-evk
     arch: arm
     modes: [64]
     smp: [64]
     aarch_hyp: [64]
-    platform: imx8mq-evk
     req: [imx8mq]
     march: armv8a
 
   MAAXBOARD:
+    platform: maaxboard
     arch: arm
     modes: [32, 64]
     smp: [64]
     aarch_hyp: [64]
-    platform: maaxboard
     req: [maaxboard1]
     march: armv8a
     no_hw_build: true
@@ -142,32 +142,32 @@ platforms:
     # ElfloaderImage: "binary"
 
   IMX8MM_EVK:
+    platform: imx8mm-evk
     arch: arm
     modes: [32, 64]
     smp: [64]
-    platform: imx8mm-evk
     req: [imx8mm]
     march: armv8a
 
   TQMA8XQP1GB:
+    platform: tqma8xqp1gb
     arch: arm
     modes: [64]
     smp: [64]
-    platform: tqma8xqp1gb
     req: [tqma]
     march: armv8a
 
   OMAP3:
+    platform: omap3
     arch: arm
     modes: [32]
-    platform: omap3
     req: [beagle]
     march: armv7a
 
   AM335X_BONEBLACK:
+    platform: am335x-boneblack
     arch: arm
     modes: [32]
-    platform: am335x-boneblack
     image_platform: am335x
     req: [bboneblack]
     march: armv8a
@@ -180,60 +180,61 @@ platforms:
     march: armv8a
 
   ODROID_C4:
+    platform: odroidc4
     arch: arm
     modes: [64]
     aarch_hyp: [64]
     smp: [64]
-    platform: odroidc4
     req: [odroidc4_1, odroidc4_2]
     march: armv8a
 
   ODROID_X:
+    platform: exynos4
     arch: arm
     modes: [32]
-    platform: exynos4
     req: [odroid]
     march: armv7a
     no_hw_test: true
 
   ODROID_XU:
+    platform: exynos5410
     arch: arm
     modes: [32]
     aarch_hyp: [32]
-    platform: exynos5410
     req: [odroid-xu]
     image_platform: exynos5
     march: armv7a
     no_hw_test: true
 
   ARNDALE:
+    platform: exynos5250
     arch: arm
     modes: [32]
-    platform: exynos5250
     req: [arndale]
     image_platform: exynos5
     march: armv7a
     no_hw_build: true
 
   ODROID_XU4:
+    platform: exynos5422
     arch: arm
     modes: [32]
     aarch_hyp: [32]
-    platform: exynos5422
     req: [odroidxu4_2]
     image_platform: exynos5
     march: armv7a
 
   ZYNQ7000:
+    platform: zynq7000
     arch: arm
     modes: [32]
-    platform: zynq7000
     req: [zc706]
     has_simulation: true
     march: armv7a
     no_hw_test: true
 
   ZYNQMP:
+    platform: zynqmp
     arch: arm
     modes: [32, 64]
     smp: [64]
@@ -247,6 +248,7 @@ platforms:
     # ElfloaderImage: "binary"
 
   ZYNQMP106:
+    platform: zynqmp
     arch: arm
     modes: [32, 64]
     smp: [64]
@@ -256,88 +258,88 @@ platforms:
     march: armv8a
 
   HIKEY:
+    platform: hikey
     arch: arm
     modes: [32, 64]
     aarch_hyp: [64]
-    platform: hikey
     req: [hikey]
     march: armv8a
     no_hw_test: true
 
   TK1:
+    platform: tk1
     arch: arm
     modes: [32]
     aarch_hyp: [32]
-    platform: tk1
     req: [jetson1]
     march: armv7a
 
   RPI3:
+    platform: rpi3
     arch: arm
     modes: [32]
-    platform: rpi3
     req: [rpi3]
     image_platform: bcm2837
     march: armv8a # ARMv8 platform currently used in AARCH32 mode only.
     no_hw_test: true
 
   RPI4:
+    platform: rpi4
     arch: arm
     modes: [64]
-    platform: rpi4
     req: [pi4B]
     image_platform: bcm2711
     march: armv8a
     no_hw_test: true
 
   TX1:
+    platform: tx1
     arch: arm
     modes: [64]
     smp: [64]
     aarch_hyp: [64]
-    platform: tx1
     req: [tx1a]
     march: armv8a
 
   TX2:
+    platform: tx2
     arch: arm
     modes: [64]
     smp: [64]
     aarch_hyp: [64]
-    platform: tx2
     req: [tx2a, tx2b]
     march: armv8a
 
   APQ8064:
+    platform: apq8064
     arch: arm
     modes: [32]
-    platform: apq8064
     req: [inforce]
     image_platform: inforce
     march: armv7a
     no_hw_build: true
 
   WANDQ:
+    platform: wandq
     arch: arm
     modes: [32]
-    platform: wandq
     image_platform: imx6
     # march: ?
     no_hw_test: true
     no_hw_build: true
 
   ALLWINNER20:
+    platform: allwinner20
     arch: arm
     modes: [32]
-    platform: allwinner20
     march: armv7a
     no_hw_test: true
     no_hw_build: true
 
   IMX7SABRE:
+    platform: imx7sabre
     arch: arm
     modes: [32]
-    platform: imx7sabre
     req: [imx7]
     image_platform: imx7
     # march: ?
@@ -345,10 +347,10 @@ platforms:
     no_hw_build: true
 
   PC99:
+    platform: x86_64
     arch: x86
     modes: [32, 64]
     smp: [32, 64]
-    platform: x86_64
     req: [skylake, haswell3, haswell4, skylake2]
     has_simulation: true
     march: nehalem
