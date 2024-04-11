@@ -26,7 +26,7 @@ def run_build(manifest_dir: str, build: Build):
 
     plat = build.get_platform()
 
-    build.files = plat.image_names(build.get_mode(), "capdl-loader")
+    build.files = plat.image_names(build.get_mode(), plat.image_base_name)
     build.settings['CAMKES_VM_APP'] = build.app or build.name
     if 'BAMBOO' in build.settings:
         del build.settings['BAMBOO']    # not used in this test, avoid warning
@@ -58,7 +58,7 @@ def hw_run(manifest_dir: str, build: Build):
         return SKIP
 
     plat = build.get_platform()
-    build.files = plat.image_names(build.get_mode(), "capdl-loader")
+    build.files = plat.image_names(build.get_mode(), plat.image_base_name)
 
     script, final = build.hw_run('log.txt')
 
