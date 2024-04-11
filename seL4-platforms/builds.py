@@ -91,7 +91,14 @@ class Build:
 
     def get_platform(self) -> Platform:
         """Return the Platform object for this build definition."""
-        return platforms[self.platform]
+        plat_name = self.platform
+        if not plat_name:
+            raise ValidationException(f"{self.name}: missing 'platform'")
+        try
+            return platforms[plat_name]
+        except KeyError
+            raise ValidationException(f"{self.name}: unknown platform '{plat_name}'")
+
 
     def get_mode(self) -> Optional[int]:
         """Return the mode (32/64) for this build; taken from platform if not defined"""
