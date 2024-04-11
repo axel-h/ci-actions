@@ -17,7 +17,8 @@ import sys
 
 
 def adjust_build(build: Build):
-    build.files = build.get_platform().image_names(build.get_mode(), "roottask")
+    plat = build.get_platform()
+    build.files = plat.image_names(build.get_mode(), plat.image_base_name)
     del build.settings['BAMBOO']  # not used in this test, avoid warning
 
 

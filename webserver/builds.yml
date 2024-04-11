@@ -5,6 +5,7 @@
 ---
 
 default:
+  image_base_name: 'capdl-loader'
   success: 'buildroot login:'
 
 builds:

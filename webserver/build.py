@@ -26,7 +26,7 @@ def run_build(manifest_dir: str, build: Build):
 
     plat = build.get_platform()
 
-    build.files = plat.image_names(build.get_mode(), "capdl-loader")
+    build.files = plat.image_names(build.get_mode(), plat.image_base_name)
     del build.settings['BAMBOO']    # not used in this test, avoid warning
 
     script = [
@@ -49,7 +49,7 @@ def hw_run(manifest_dir: str, build: Build):
         return SKIP
 
     plat = build.get_platform()
-    build.files = plat.image_names(build.get_mode(), "capdl-loader")
+    build.files = plat.image_names(build.get_mode(), plat.image_base_name)
 
     script, final = build.hw_run('log.txt')
 

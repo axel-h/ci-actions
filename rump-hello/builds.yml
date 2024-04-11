@@ -5,6 +5,7 @@
 ---
 
 default:
+    image_base_name: roottask
     success: '10sec'
     settings:
         LibSel4SerialServerColoredOutput: 'OFF'
