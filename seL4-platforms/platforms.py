@@ -147,23 +147,6 @@ class Platform:
         else:
             return None
 
-    def get_platform(self, mode: int) -> str:
-        """Return platform string, including for x86"""
-
-        # In x86 the 'platform' attribute is a dummy thing, the actual values
-        # is derived from the mode selected for the buiid.
-        if self.arch == "x86":
-            try:
-                return {32: "ia32", 64: "x86_64"}[mode]
-            except KeyError:
-                raise ValidationException(f"{self.name}: unknown mode '{mode}'")
-
-        plat = self.platform
-        if not plat:
-            raise ValidationException("'platform' is not set")
-
-        return plat
-
     def toolchain_arch_str(self) -> str:
         """Return toolchain string for arm/riscv"""
         return {"arm": "AARCH", "riscv": "RISCV"}.get(self.arch, "")
