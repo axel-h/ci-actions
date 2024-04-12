@@ -34,14 +34,11 @@ def build_filter(build: Build) -> bool:
     return build.app not in disable_app_for.get(build.get_platform().name, [])
 
 
-def to_json(builds: list) -> str:
-    """Return a GitHub build matrix as GitHub output assignment.
-
-    Basically just returns a list of build names that we can then
-    filter on."""
-
-    matrix = {"include": [{"name": b.name} for b in builds]}
-    return "matrix=" + json.dumps(matrix)
+def gh_output_matrix(param_name: str, builds: list[Build]) -> None:
+    build_list = [{"name": b.name} for b in builds]
+    # GitHub output assignment
+    matrix_json = json.dumps({"include": build_list})
+    gh_output(f"{param_name}={matrix_json}")
 
 
 def main(params: list) -> int:
@@ -62,7 +59,7 @@ def main(params: list) -> int:
         return 0
 
     if args.matrix:
-        gh_output(to_json(builds))
+        gh_output_matrix("matrix", builds)
         return 0
 
     # perform args.build as default
