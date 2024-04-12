@@ -102,6 +102,10 @@ def build_filter(build: builds.Build) -> bool:
 
 
 def gh_output_matrix(param_name: str, build_list: list[builds.Build], filter_func) -> None:
+
+    for b in build_list:
+        print(b)
+
     matrix_builds = []
     # Loop over all the different platforms of the build list. Using
     # set-comprehension " { ... for ... } " instead of list-comprehension
