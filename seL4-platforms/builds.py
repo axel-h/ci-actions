@@ -739,11 +739,10 @@ def build_for_variant(base_build: Build, variant, filter_fun=lambda x: True) -> 
     build.name = build.name + "_" + variant_name(variant)
 
     mode = var_dict.get("mode") or build.get_mode()
-    if mode in build.get_platform().modes:
-        build.mode = mode
-    else:
+    if mode not in build.get_platform().modes:
         return None
 
+    build.mode = mode
     # build.mode is now unique, more settings could apply
     build.update_settings()
 
