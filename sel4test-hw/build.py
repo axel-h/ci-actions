@@ -12,6 +12,7 @@ import sys
 import os
 import argparse
 import json
+import itertools
 
 from builds import Build, run_build_script, run_builds, load_builds, junit_results
 from builds import release_mq_locks, SKIP
@@ -101,39 +102,32 @@ def build_filter(build: Build) -> bool:
     return True
 
 
-def to_json(builds: List[Build]) -> str:
-    """Return a GitHub build matrix per enabled hardware platform as GitHub output assignment."""
+def gh_output_matrix(param_name: str, builds: list[Build]) -> None:
+    build_list = []
+    # Loop over all the different platforms of the build list. Using
+    # set-comprehension " { ... for ... } " instead of list-comprehension
+    # " [ ... for ... ] " eliminates duplicates automatically.
+    for plat in {b.get_platform() for b in builds}:
 
-    def run_for_plat(plat: Platform) -> list[dict]:
+        # ignore all platforms that can't tested or not even be built
         if plat.no_hw_test or plat.no_hw_build:
-            return []
+            continue
 
-        # separate runs for each compiler on arm
-        if plat.arch == 'arm':
-            return [
-                {"platform": plat.name, "march": plat.march, "compiler": "gcc"},
-                {"platform": plat.name, "march": plat.march, "compiler": "clang"},
-            ]
+        variants = {"compiler": ["gcc", "clang"]}
+        if (plat.arch == 'x86'):
+            variants["mode"] = [32, 64]
 
-        if plat.arch == 'riscv':
-            return [
-                {"platform": plat.name, "march": plat.march, "compiler": "gcc"},
-                {"platform": plat.name, "march": plat.march, "compiler": "clang"},
-            ]
+        # create builds for all combination from the variants matrix
+        for vals in itertools.product(*(variants.values())):
+            build_variant = {"platform": plat.name,
+                             "march": plat.march,
+                             **dict(zip(variants.keys(), vals))
+                            }
+            build_list.append(build_variant)
 
-        # separate runs for each compiler + mode on x86, because we have more machines available
-        if plat.arch == 'x86':
-            return [
-                {"platform": plat.name, "march": plat.march, "compiler": "gcc", "mode": 32},
-                {"platform": plat.name, "march": plat.march, "compiler": "clang", "mode": 32},
-                {"platform": plat.name, "march": plat.march, "compiler": "gcc", "mode": 64},
-                {"platform": plat.name, "march": plat.march, "compiler": "clang", "mode": 64},
-            ]
-
-    platforms = set([b.get_platform() for b in builds])
-    matrix = {"include": [run for plat in platforms for run in run_for_plat(plat)]}
-
-    return "matrix=" + json.dumps(matrix)
+    # GitHub output assignment
+    matrix_json = json.dumps({"include": build_list})
+    gh_output(f"{param_name}={matrix_json}")
 
 
 def main(params: list) -> int:
@@ -154,7 +148,7 @@ def main(params: list) -> int:
         return 0
 
     if args.matrix:
-        gh_output(to_json(builds))
+        gh_output_matrix("matrix", builds)
         return 0
 
     if args.hw:

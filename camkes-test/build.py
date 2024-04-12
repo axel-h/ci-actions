@@ -116,11 +116,14 @@ def sim_build_filter(build: SimBuild) -> bool:
     return (not name or build.name == name) and (not plat or plat == 'sim')
 
 
-def to_json(builds: list[Build]) -> str:
-    """Return a GitHub build matrix as GitHub output assignment."""
-
-    matrix = {"include": [{"name": b.name, "platform": b.get_platform().name} for b in builds]}
-    return "matrix=" + json.dumps(matrix)
+def gh_output_matrix(param_name: str, builds: list[Build]) -> None:
+    build_list = [{"name": b.name,
+                   "platform": b.get_platform().name
+                  }
+                  for b in builds]
+    # GitHub output assignment
+    matrix_json = json.dumps({"include": build_list})
+    gh_output(f"{param_name}={matrix_json}")
 
 
 def main(params: list) -> int:
@@ -145,7 +148,7 @@ def main(params: list) -> int:
         return 0
 
     if args.matrix:
-        gh_output(to_json(builds))
+        gh_output_matrix("matrix", builds)
         return 0
 
     if args.hw:
