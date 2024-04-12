@@ -104,9 +104,25 @@ def build_filter(build: builds.Build) -> bool:
 def gh_output_matrix(param_name: str, build_list: list[builds.Build], filter_func) -> None:
 
     for b in build_list:
-        print(b)
-
-    matrix_builds = []
+    # Github support building different varians based in a matrix. The general
+    # format is:
+    #
+    #  matrix:
+    #    axix_1: [list of itmes]
+    #    axix_2: [list of itmes]
+    #    ...
+    #    exclude: [list of itmes]
+    #    include: [list of itmes]
+    #
+    # The "matrix" we product here is just a list of itmes in the 'include'
+    # attribute.
+    #
+    # The list of builds we get passed already contains all variants we will
+    # build eventually . However, we do not want to build every variant in a
+    # separate task. So for the github task list, we just look for the
+    # different platforms. For each platform we want a separate task for the
+    # compiler options. For x86 there is a special handling, as we have one
+    # platform only, that support
     # Loop over all the different platforms of the build list. Using
     # set-comprehension " { ... for ... } " instead of list-comprehension
     # " [ ... for ... ] " eliminates duplicates automatically.
