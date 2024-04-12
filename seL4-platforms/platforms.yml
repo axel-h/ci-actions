@@ -355,6 +355,16 @@ platforms:
     has_simulation: true
     march: nehalem
 
+  FOO
+    platform: 'foo-platform'
+    arch: x86
+    modes: [32, 64]
+    smp: [32, 64]
+    req: [skylake, haswell3, haswell4, skylake2]
+    has_simulation: true
+    march: nehalem
+
+
 # platforms where MCS is wholly unsupported
 # (for platforms with partial support see sel4test-hw/build.py and comments below)
 mcs_unsupported_platforms:
