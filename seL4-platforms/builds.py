@@ -74,15 +74,37 @@ class Build:
                 if k not in self.settings:
                     self.settings[k] = v
 
-        if self.get_mode():
-            self.update_settings()
+        self.update_settings()
 
     def update_settings(self):
+
         p = self.get_platform()
+        is_x86 = (p.arch == "x86")
+
         m = self.get_mode()
-        if p.arch != "x86":
+
+        if m and not is_x86:
             self.settings[p.cmake_toolchain_setting(m)] = "TRUE"
-        self.settings["PLATFORM"] = p.get_platform(m)
+
+        # Usually, PLATFORM can be taken from the platform directly. Just on
+        # x86 the value is mode specific architecture name.
+        def get_plat_str():
+            if not is_x86:
+                plat_str = p.platform
+                if not plat_str
+                    raise ValidationException("'platform' is not set")
+                return plat_str;
+
+            if not m:
+                return None # nasty corner case
+            try:
+                return {32: "ia32", 64: "x86_64"}[m]
+            except KeyError:
+                raise ValidationException(f"{self.name}: unknown mode '{mode}'")
+
+        self.settings["PLATFORM"] = get_plat_str()
+
+
         # somewhat misnamed now; sets test output to parsable xml:
         self.settings["BAMBOO"] = "TRUE"
         self.files = p.image_names(m, self.image_base_name)
