@@ -101,15 +101,14 @@ def build_filter(build: builds.Build) -> bool:
     return True
 
 
-def gh_output_matrix(param_name: str, build_list: list[builds.Build]) -> None:
+def gh_output_matrix(param_name: str, build_list: list[builds.Build], filter_func) -> None:
     matrix_builds = []
     # Loop over all the different platforms of the build list. Using
     # set-comprehension " { ... for ... } " instead of list-comprehension
     # " [ ... for ... ] " eliminates duplicates automatically.
     for plat in {b.get_platform() for b in build_list}:
 
-        # ignore all platforms that can't tested or not even be built
-        if plat.no_hw_test or plat.no_hw_build:
+        if filter_func(plat):
             continue
 
         variants = {"compiler": ["gcc", "clang"]}
@@ -147,7 +146,8 @@ def main(params: list) -> int:
         return 0
 
     if args.matrix:
-        gh_output_matrix("matrix", build_list)
+        gh_output_matrix("matrix_build", build_list, lambda p: p.no_hw_build)
+        gh_output_matrix("matrix", build_list, lambda p: p.no_hw_build or p.no_hw_test)
         return 0
 
     if args.hw:
