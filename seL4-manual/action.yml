@@ -15,4 +15,4 @@ inputs:
 
 runs:
   using: 'docker'
-  image: 'docker://sel4/sel4-manual:latest'
+  image: 'Dockerfile'
