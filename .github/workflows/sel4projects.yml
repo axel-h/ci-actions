@@ -1,0 +1,109 @@
+# Copyright 2024, Axel Heider
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+name: sel4-projects
+
+on:
+  workflow_call:
+    inputs:
+      projects:
+        type: string
+        required: true
+      labels:
+        required: false
+        type: string
+      concurrency_group:
+        required: true
+        type: string
+      workflow_call_repo:
+        required: false
+        type: string
+        default: "axel-h/ci-actions" # "sel4/ci-actions"
+      workflow_call_branch:
+        required: false
+        type: string
+        default: "patch-axel-7" # "master"
+      workflow_call_workflow:
+        required: true
+        type: string
+
+# intended to run on
+#  pull_request_target:
+#    types: [opened, reopened, synchronize, labeled]
+# needs PR target for secrets access; guard by requiring label
+
+# downgrade permissions to read-only as you would have in a standard PR action
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: ${{ github.event_name == 'pull_request_target' }}
+    outputs:
+      sel4test: ${{ ((github.event.action != 'labeled') &&
+                     (contains(github.event.pull_request.labels.*.name, 'hw-build') ||
+                      contains(github.event.pull_request.labels.*.name, 'hw-test'))) ||
+                    ((github.event.action == 'labeled') &&
+                     ((github.event.label.name == 'hw-build') ||
+                      (github.event.label.name == 'hw-test'))) }}
+      sel4bench: ${{ ((github.event.action == 'labeled') &&
+                      (github.event.label.name == 'hw-bench')) ||
+                     ((github.event.action != 'labeled') &&
+                      contains(github.event.pull_request.labels.*.name, 'hw-bench')) }}
+#sim: false
+# echo "prj sim:" ${{ fromJSON(format('[{0}]', inputs.projects)) }}
+
+    runs-on: ubuntu-latest
+    steps:
+    - env:
+        inputs_JSON: ${{ toJSON(inputs) }}
+        # broken: inputs2_JSON: ${{ toJSON(fromJSON('[a,b,c]')) }}
+        github_JSON: ${{ toJSON(github) }}
+      run: |
+        echo "workflow:" ${{ github.workflow_ref }}
+        echo "inputs2_JSON: ${inputs2_JSON}"
+        echo "prj sim:" ${{ inputs.projects }}
+        echo "prj sim:" "${{ format('[{0}]', inputs.projects) }}"
+
+
+#        echo "prj sim:" ${{ contains(fromJSON(format('[{0}]', inputs.projects)), 'sim') }}
+#
+#        inputs2_JSON: ${{ toJSON(fromJSON(format('[{0}]', inputs.projects))) }}
+#
+#        echo "prj sel4test:" ${{ contains(fromJSON(format('[{0}]', inputs.projects)), 'sel4test') }}
+#        echo "prj sel4bench:" ${{ contains(fromJSON(format('[{0}]', inputs.projects)), 'sel4bench') }}
+#        echo "prj foo: " ${{ contains(fromJSON(format('[{0}]', inputs.projects)), 'foo') }}
+#
+#  sim:
+#    name: Sim
+#    needs: [check]
+#    if: ${{ needs.check.outputs.sim }}
+#    concurrency:
+#      group: ${{ github.workflow }}-sim-pr-${{ github.event.number }}
+#      cancel-in-progress: true
+#    uses: axel-h/ci-actions/.github/workflows/sel4test-sim.yml@patch-axel-7
+
+  sel4test:
+    name: sel4test
+    needs: [check]
+    if: ${{ needs.check.outputs.sel4test }}
+    concurrency:
+      group: ${{ github.workflow }}-sel4test-pr-${{ github.event.number }}
+      cancel-in-progress: true
+    uses: axel-h/ci-actions/.github/workflows/sel4test-hw.yml@patch-axel-7
+    with:
+      hw: ${{ contains(github.event.pull_request.labels.*.name, 'hw-build') }}
+    secrets: inherit
+
+  sel4bench:
+    name: sel4bench
+    needs: [check]
+    if: ${{ needs.check.outputs.sel4bench }}
+    concurrency:
+      group: ${{ github.workflow }}-sel4bench-pr-${{ github.event.number }}
+      cancel-in-progress: true
+    uses: axel-h/ci-actions/.github/workflows/sel4bench-hw.yml@patch-axel-7
+    with:
+      hw: ${{ contains(github.event.pull_request.labels.*.name, 'hw-bench') }}
+    secrets: inherit
