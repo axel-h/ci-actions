@@ -46,7 +46,7 @@ build-filter:
       arch: [arm, x86]
     - has_simulation: true
       arch: [riscv]
-      # Bamboo has no "release" simulation for RISCV, and it doesn't seem to work either:
+      # "release" simulation for RISCV does not work
       debug: [debug]
 
 

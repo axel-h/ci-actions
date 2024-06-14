@@ -14,11 +14,12 @@ The module loads platforms.yml on init, which includes available architectures,
 modes, platforms, a list of unsupported platforms, and a list of named machines.
 """
 
+from typing import Union
 from io import StringIO
-from typing import Optional
-from pprint import pprint
-import yaml
 import os
+import yaml
+from pprint import pprint
+
 
 # exported names:
 __all__ = [
@@ -139,7 +140,7 @@ class Platform:
         """Does the platform support ARM_HYP in mode 64?"""
         return 64 in self.aarch_hyp
 
-    def get_mode(self) -> Optional[int]:
+    def get_mode(self) -> Union[int, None]:
         """Return mode (32/64) of this platform if unique, otherwise None"""
         if len(self.modes) == 1:
             return self.modes[0]
@@ -194,7 +195,7 @@ class Platform:
         return self.march.capitalize()
 
 
-def load_yaml(file_name):
+def load_yaml(file_name: str):
     """Load a yaml file"""
     with open(file_name, 'r') as file:
         return yaml.safe_load(file)
@@ -211,7 +212,8 @@ def gh_output(assgn: str):
 
 
 # module init:
-_yaml_platforms = load_yaml(os.path.dirname(__file__) + "/platforms.yml")
+_platforms_yaml_file = os.path.join(os.path.dirname(__file__), "platforms.yml")
+_yaml_platforms = load_yaml(_platforms_yaml_file)
 
 all_architectures = _yaml_platforms["architectures"]
 all_modes = _yaml_platforms["modes"]
@@ -227,8 +229,9 @@ for p in mcs_unsupported:
     if not platforms.get(p):
         print(f"Warning: unknown platform '{p}' in mcs_unsupported list")
 
+
 # if called as main, dump info:
-if __name__ == '__main__':
+def main(argv: list) -> int:
     print("\n# Architectures:")
     pprint(all_architectures)
 
@@ -250,3 +253,8 @@ if __name__ == '__main__':
 
     print("\n# all sim:")
     pprint([p.name for p in platforms.values() if p.has_simulation])
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
