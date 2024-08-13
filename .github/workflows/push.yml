@@ -26,3 +26,37 @@ jobs:
       - uses: seL4/ci-actions/link-check@master
         with:
           exclude: '/node_modules/'
+
+  mypy:
+    name: MyPy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mypy
+        run: pip3 install mypy
+      - name: Run mypy
+        #run: mypy --explicit-package-bases ./
+        run: |
+            mypy seL4-platforms
+            mypy seL4-platforms camkes-hw
+            mypy seL4-platforms camkes-test
+            mypy seL4-platforms camkes-vm
+            mypy seL4-platforms camkes-vm-hw
+            mypy seL4-platforms cparser-run
+            mypy seL4-platforms dashboard
+            mypy seL4-platforms l4v-deploy
+            mypy seL4-platforms march-of-platform
+            mypy seL4-platforms rump-hello
+            mypy seL4-platforms rump-hello-hw
+            mypy seL4-platforms sel4bench
+            mypy seL4-platforms sel4bench-hw
+            mypy seL4-platforms sel4bench-web
+            mypy seL4-platforms sel4test-hw
+            mypy seL4-platforms sel4test-hw-matrix
+            mypy seL4-platforms sel4test-hw-run
+            mypy seL4-platforms sel4test-sim
+            mypy seL4-platforms thylint
+            mypy seL4-platforms trigger
+            mypy seL4-platforms tutorials
+            mypy seL4-platforms webserver
+            mypy seL4-platforms webserver-hw

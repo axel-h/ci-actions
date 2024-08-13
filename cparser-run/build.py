@@ -8,14 +8,15 @@ Parse builds.yml and run l4v C Parser test on each of the build definitions.
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+import argparse
+
 from builds import run_build_script, run_builds, load_builds
 from pprint import pprint
 
-import os
-import sys
 
-
-def run_cparser(manifest_dir: str, build):
+def run_cparser(manifest_dir: str, build) -> int:
     """Single run of the C Parser test, for one build definition"""
 
     script = [
@@ -28,12 +29,23 @@ def run_cparser(manifest_dir: str, build):
     return run_build_script(manifest_dir, build, script)
 
 
-# If called as main, run all builds from builds.yml
-if __name__ == '__main__':
-    builds = load_builds(os.path.dirname(__file__) + "/builds.yml")
+def main(params: list) -> int:
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('--dump', action='store_true')
+    g.add_argument('--build', action='store_true')
+    args = parser.parse_args(params)
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--dump':
+    builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
+    builds = load_builds(builds_yaml_file)
+
+    if args.dump:
         pprint(builds)
-        sys.exit(0)
+        return 0
 
-    sys.exit(run_builds(builds, run_cparser))
+    # perform args.build as default
+    return run_builds(builds, run_cparser)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
