@@ -19,12 +19,12 @@ def loud_command(*args, **kwargs):
     return run_command(*args, **kwargs)
 
 
-def indent(s, indent='    '):
+def indent(s, indent='    ') -> str:
     '''Indent all lines in a string'''
     return '\n'.join(indent + line for line in s.splitlines())
 
 
-def format_commit_message(msg):
+def format_commit_message(msg: str) -> str:
     '''Add a standard header and footer to a commit message'''
     msg = "[CI] " + msg
     return msg
