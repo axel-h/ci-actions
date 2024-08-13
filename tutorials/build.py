@@ -8,16 +8,17 @@ Parse builds.yml and run sel4test build + simulation on each of the build defini
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+import argparse
+import json
+
 from builds import Build, load_builds, run_build_script, run_builds, junit_results
 from platforms import load_yaml, gh_output
 from pprint import pprint
 
-import json
-import os
-import sys
 
-
-def run_simulation(manifest_dir: str, build: Build):
+def run_simulation(manifest_dir: str, build: Build) -> int:
     """Run one tutorial test."""
 
     script = [
@@ -33,28 +34,37 @@ def build_filter(build: Build) -> bool:
     return build.app not in disable_app_for.get(build.get_platform().name, [])
 
 
-def to_json(builds: list) -> str:
-    """Return a GitHub build matrix as GitHub output assignment.
-
-    Basically just returns a list of build names that we can then
-    filter on."""
-
-    matrix = {"include": [{"name": b.name} for b in builds]}
-    return "matrix=" + json.dumps(matrix)
+def gh_output_matrix(param_name: str, build_list: list[builds.Build]) -> None:
+    matrix_builds = [{"name": b.name} for b in build_list]
+    # GitHub output assignment
+    matrix_json = json.dumps({"include": matrix_builds})
+    platforms.gh_output(f"{param_name}={matrix_json}")
 
 
-# If called as main, run all builds from builds.yml
-if __name__ == '__main__':
-    yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
+def main(params: list) -> int:
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('--dump', action='store_true')
+    g.add_argument('--matrix', action='store_true')
+    g.add_argument('--build', action='store_true')
+    args = parser.parse_args(params)
+
+    builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
+    yml = load_yaml(builds_yaml_file)
     disable_app_for = yml['disable_app_for']
-
     builds = load_builds(None, build_filter, yml)
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--dump':
+    if args.dump:
         pprint(builds)
-        sys.exit(0)
-    elif len(sys.argv) > 1 and sys.argv[1] == '--matrix':
-        gh_output(to_json(builds))
-        sys.exit(0)
+        return 0
 
-    sys.exit(run_builds(builds, run_simulation))
+    if args.matrix:
+        gh_output_matrix("matrix", build_list)
+        return 0
+
+    # perform args.build as default
+    return run_builds(builds, run_simulation)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

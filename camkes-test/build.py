@@ -8,15 +8,15 @@ Parse builds.yml and run CAmkES test on each of the build definitions.
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
-from builds import Build, run_build_script, run_builds, load_builds, release_mq_locks, SKIP
-from pprint import pprint
-from typing import List, Union
-
-import json
-import os
 import sys
+import os
+import argparse
+import json
 
-from platforms import load_yaml, gh_output
+import builds
+import platforms
+import pprint
+
 
 # See also builds.yml for how builds are split up in this test. We use the build
 # matrix and filtering for the hardware builds, and an explicit list for the
@@ -33,7 +33,7 @@ class SimBuild():
         self.name = sim['match'] + post
         self.__dict__.update(**sim)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"SimBuild('{self.name}', " '{' \
             f" 'match': '{self.match}'," \
             f" 'exclude': '{self.exclude}'," \
@@ -41,18 +41,22 @@ class SimBuild():
             ' })'
 
 
-def run_build(manifest_dir: str, build: Union[Build, SimBuild]):
+def run_build(manifest_dir: str, build: builds.Build | SimBuild) -> int:
     """Run one CAmkES test. Can be either Build or SimBuild."""
 
-    if isinstance(build, Build):
+    if isinstance(build, builds.Build):
         app = apps[build.app]
         build.files = build.get_platform().image_names(build.get_mode(), "capdl-loader")
         build.settings['CAMKES_APP'] = build.app
-        del build.settings['BAMBOO']  # not used in this test, avoid warning
 
         if app.get('has_cakeml'):
             build.settings['CAKEMLDIR'] = '/cakeml'
             build.settings['CAKEML_BIN'] = f"/cake-x64-{build.get_mode()}/cake"
+
+        # remove parameters from setting that CMake does not use and thus would
+        # raise a nasty warning
+        if 'BAMBOO' in build.settings:
+            del build.settings['BAMBOO']
 
         script = [
             ["../init-build.sh"] + build.settings_args(),
@@ -73,23 +77,23 @@ def run_build(manifest_dir: str, build: Union[Build, SimBuild]):
     else:
         print(f"Warning: unknown build type for {build.name}")
 
-    return run_build_script(manifest_dir, build, script)
+    return builds.run_build_script(manifest_dir, build, script)
 
 
-def hw_run(manifest_dir: str, build: Build):
+def hw_run(manifest_dir: str, build: builds.Build) -> int:
     """Run one hardware test."""
 
     if build.is_disabled():
         print(f"Build {build.name} disabled, skipping.")
-        return SKIP
+        return builds.SKIP
 
     build.success = apps[build.app]['success']
     script, final = build.hw_run('log.txt')
 
-    return run_build_script(manifest_dir, build, script, final_script=final)
+    return builds.run_build_script(manifest_dir, build, script, final_script=final)
 
 
-def build_filter(build: Build):
+def build_filter(build: builds.Build) -> bool:
     if not build.app:
         return False
 
@@ -106,37 +110,57 @@ def build_filter(build: Build):
     return True
 
 
-def sim_build_filter(build: SimBuild):
+def sim_build_filter(build: SimBuild) -> bool:
     name = os.environ.get('INPUT_NAME')
     plat = os.environ.get('INPUT_PLATFORM')
     return (not name or build.name == name) and (not plat or plat == 'sim')
 
 
-def to_json(builds: List[Build]) -> str:
-    """Return a GitHub build matrix as GitHub output assignment."""
+def gh_output_matrix(param_name: str, build_list: list[builds.Build]) -> None:
+    matrix_builds = [{"name": b.name,
+                      "platform": b.get_platform().name
+                     }
+                     for b in build_list]
+    # GitHub output assignment
+    matrix_json = json.dumps({"include": matrix_builds})
+    platforms.gh_output(f"{param_name}={matrix_json}")
 
-    matrix = {"include": [{"name": b.name, "platform": b.get_platform().name} for b in builds]}
-    return "matrix=" + json.dumps(matrix)
 
+def main(params: list) -> int:
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('--dump', action='store_true')
+    g.add_argument('--matrix', action='store_true')
+    g.add_argument('--hw', action='store_true')
+    g.add_argument('--post', action='store_true')
+    g.add_argument('--build', action='store_true')
+    args = parser.parse_args(params)
 
-# If called as main, run all builds from builds.yml
-if __name__ == '__main__':
-    yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
+    builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
+    yml = platforms.load_yaml(builds_yaml_file)
     apps = yml['apps']
     sim_builds = [SimBuild(s) for s in yml['sim']]
-    hw_builds = load_builds(None, build_filter, yml)
-    builds = [b for b in sim_builds if sim_build_filter(b)] + hw_builds
+    hw_builds = builds.load_builds(None, build_filter, yml)
+    build_list = [b for b in sim_builds if sim_build_filter(b)] + hw_builds
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--dump':
-        pprint(builds)
-        sys.exit(0)
-    elif len(sys.argv) > 1 and sys.argv[1] == '--matrix':
-        gh_output(to_json(builds))
-        sys.exit(0)
-    elif len(sys.argv) > 1 and sys.argv[1] == '--hw':
-        sys.exit(run_builds(builds, hw_run))
-    elif len(sys.argv) > 1 and sys.argv[1] == '--post':
-        release_mq_locks(builds)
-        sys.exit(0)
+    if args.dump:
+        pprint.pprint(build_list)
+        return 0
 
-    sys.exit(run_builds(builds, run_build))
+    if args.matrix:
+        gh_output_matrix("matrix", build_list)
+        return 0
+
+    if args.hw:
+        return builds.run_builds(build_list, hw_run)
+
+    if args.post:
+        builds.release_mq_locks(build_list)
+        return 0
+
+    # perform args.build as default
+    return builds.run_builds(build_list, run_build)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

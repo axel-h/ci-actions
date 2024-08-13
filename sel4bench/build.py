@@ -8,33 +8,34 @@ Parse builds.yml and either build sel4bench images or run sel4bench images.
 Expects seL4-platforms/ to be co-located or otherwise in the PYTHONPATH.
 """
 
+import sys
+import os
+import subprocess
+import argparse
+import json
+import time
+from datetime import datetime
+
 from builds import Build, Run, run_build_script, run_builds, load_builds, load_yaml
 from builds import release_mq_locks, filtered, get_env_filters, printc, ANSI_RED
 from builds import SKIP, SUCCESS, REPEAT, FAILURE
 
 from pprint import pprint
-from typing import List, Optional
-
-from datetime import datetime
-
-import json
-import os
-import sys
-import subprocess
-import time
 
 
 def adjust_build_settings(build: Build):
-    if 'BAMBOO' in build.settings:
-        del build.settings['BAMBOO']  # not used in this build, avoid warning
-
     # see discussion on https://github.com/seL4/sel4bench/pull/20 for hifive exclusion
     if build.is_smp() or build.get_platform().name == 'HIFIVE':
         build.settings['HARDWARE'] = 'FALSE'
         build.settings['FAULT'] = 'FALSE'
 
+    # remove parameters from setting that CMake does not use and thus would
+    # raise a nasty warning
+    if 'BAMBOO' in build.settings:
+        del build.settings['BAMBOO']
 
-def hw_build(manifest_dir: str, build: Build):
+
+def hw_build(manifest_dir: str, build: Build) -> int:
     """Do one hardware build."""
 
     adjust_build_settings(build)
@@ -68,7 +69,7 @@ def extract_json(results: str, run: Run) -> int:
     return SUCCESS if res.returncode == 0 else REPEAT
 
 
-def hw_run(manifest_dir: str, run: Run):
+def hw_run(manifest_dir: str, run: Run) -> int:
     """Run one hardware test."""
 
     if run.build.is_disabled():
@@ -118,7 +119,7 @@ def build_filter(build: Build) -> bool:
     return True
 
 
-def make_runs(builds: List[Build]) -> List[Run]:
+def make_runs(builds: list[Build]) -> list[Run]:
     """Split PC99 builds into runs for haswell3 and skylake, no changes to the rest"""
 
     # could filter more generically, but we're really only interested in REQ here,
@@ -141,7 +142,7 @@ def make_runs(builds: List[Build]) -> List[Run]:
     return runs
 
 
-def get_results(run: Run) -> List[float]:
+def get_results(run: Run) -> list[float]:
     """Get the benchmark results from JSON for a specific run."""
 
     with open(f"{run.name}.json") as f:
@@ -185,7 +186,7 @@ def get_results(run: Run) -> List[float]:
     return [irq_invoke, irq_invoke_s, ipc_call, ipc_call_s, ipc_reply, ipc_reply_s, notify, notify_s]
 
 
-def get_run(runs: List[Run], name: str) -> Optional[Run]:
+def get_run(runs: list[Run], name: str) -> Run:
     """Get a run by name."""
 
     for run in runs:
@@ -196,7 +197,7 @@ def get_run(runs: List[Run], name: str) -> Optional[Run]:
     return None
 
 
-def gen_web(runs: List[Run], yml, file_name: str):
+def gen_web(runs: list[Run], yml, file_name: str):
     """Generate web page for benchmark results according to the set defined in builds.yml"""
 
     manifest_sha = os.getenv('INPUT_MANIFEST_SHA')
@@ -355,9 +356,18 @@ def gen_web(runs: List[Run], yml, file_name: str):
         f.write('.</p>')
 
 
-# If called as main, run all builds from builds.yml
-if __name__ == '__main__':
-    yml = load_yaml(os.path.dirname(__file__) + "/builds.yml")
+def main(params: list) -> int:
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('--dump', action='store_true')
+    g.add_argument('--hw', action='store_true')
+    g.add_argument('--post', action='store_true')
+    g.add_argument('--web', action='store_true')
+    g.add_argument('--build', action='store_true')
+    args = parser.parse_args(argv[1:])
+
+    builds_yaml_file = os.path.join(os.path.dirname(__file__), "builds.yml")
+    yml = load_yaml(builds_yaml_file)
     builds = load_builds(None, filter_fun=build_filter, yml=yml)
 
     # add additional builds; run only env filter, trusting that manual builds
@@ -367,19 +377,24 @@ if __name__ == '__main__':
     more_builds = [Build(b, default_build) for b in yml.get("more_builds", [])]
     builds.extend([b for b in more_builds if b and filtered(b, env_filters)])
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--dump':
+    if args.dump:
         pprint(builds)
-        sys.exit(0)
+        return 0
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--hw':
-        sys.exit(run_builds(make_runs(builds), hw_run))
+    if args.hw:
+        return run_builds(make_runs(builds), hw_run)
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--post':
+    if args.post:
         release_mq_locks(builds)
-        sys.exit(0)
+        return 0
 
-    if len(sys.argv) > 1 and sys.argv[1] == '--web':
+    if args.web:
         gen_web(make_runs(builds), yml, "index.html")
-        sys.exit(0)
+        return 0
 
-    sys.exit(run_builds(builds, hw_build))
+    # perform args.build as default
+    return run_builds(builds, hw_build)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
