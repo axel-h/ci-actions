@@ -12,18 +12,19 @@ them, `run_build_script` for a standard test driver frame, and
 `default_junit_results` for a standard place to leave a jUnit summary file.
 """
 
-from junitparser.junitparser import Failure, Error
-from platforms import ValidationException, Platform, platforms, load_yaml, mcs_unsupported
-
-from typing import Optional, List, Tuple, Union
-from junitparser import JUnitXml
-
+from typing import Union
+import sys
+import os
+import subprocess
+import shutil
 import copy
 import time
-import os
-import shutil
-import subprocess
-import sys
+
+import platforms
+from platforms import ValidationException
+from junitparser.junitparser import Failure, Error
+from junitparser import JUnitXml
+
 
 # exported names:
 __all__ = [
@@ -34,13 +35,72 @@ __all__ = [
 # where to expect jUnit results by default
 junit_results = 'results.xml'
 
-# colour codes
-ANSI_RESET = "\033[0m"
-ANSI_RED = "\033[31;1m"
-ANSI_GREEN = "\033[32m"
-ANSI_YELLOW = "\033[33m"
-ANSI_WHITE = "\033[37m"
-ANSI_BOLD = "\033[1m"
+# return codes for a test run or single step of a run
+FAILURE = 0
+SUCCESS = 1
+SKIP = 2
+REPEAT = 3
+
+
+class AnsiPrinter:
+    # colour codes
+    ANSI_RESET = "\033[0m"
+    ANSI_BOLD = "\033[1m"
+    #ANSI_BLACK = "\033[30m"
+    ANSI_RED = "\033[31;1m"
+    ANSI_GREEN = "\033[32m"
+    ANSI_YELLOW = "\033[33m"
+    ANSI_BLUE = "\033[34m"
+    ANSI_MAGENTA = "\033[35m"
+    ANSI_CYAN = "\033[36m"
+    ANSI_WHITE = "\033[37m"
+
+    @classmethod
+    def printc(cls, ansi_color: str, content: str):
+        print(f"{ansi_color}{content}{cls.ANSI_RESET}")
+        sys.stdout.flush()
+
+    @classmethod
+    def error(cls, content: str):
+        cls.printc(cls.ANSI_RED, content)
+
+    @classmethod
+    def warn(cls, content: str):
+        cls.printc(cls.ANSI_YELLOW, content)
+
+    @classmethod
+    def skip(cls, content: str):
+        cls.printc(cls.ANSI_YELLOW, content)
+
+    @classmethod
+    def ok(cls, content: str):
+        cls.printc(cls.ANSI_GREEN, content)
+
+    @classmethod
+    def command(cls, cmd: Union[str, list]):
+        cmd = cmd if isinstance(cmd, str) \
+            else " ".join(cmd) if isinstance(cmd, list) \
+            else str(cmd)
+        cls.printc(cls.ANSI_YELLOW, f"+++ {cmd}")
+
+    @classmethod
+    def step_start(cls, step_type: str, step_name: str):
+        print(f"::group::{step_name}")
+        cls.printc(cls.ANSI_BOLD,
+                   f"-----------[ start {step_type} {step_name} ]-----------")
+
+    @classmethod
+    def step_end(cls, step_type: str, step_name: str, result: int):
+        cls.printc(cls.ANSI_BOLD,
+                   f"-----------[ end {step_type} {step_name} ]-----------")
+        print("::endgroup::")
+        # print status after group, so that it's easier to scan for failed jobs
+        if result == SUCCESS:
+            cls.ok(f"{step_name} succeeded")
+        elif result == SKIP:
+            cls.skip(f"{step_name} skipped")
+        elif result == FAILURE:
+            cls.error(f"{step_name} FAILED")
 
 
 class Build:
@@ -62,7 +122,7 @@ class Build:
         self.settings = {}
         self.timeout = 900
         self.no_hw_test = False
-        self.image_base_name = "sel4test-driver"
+        self.image_base_name = None
         [self.name] = entries.keys()
         attribs = copy.deepcopy(default)
         # this potentially overwrites the default settings dict, we restore it later
@@ -83,17 +143,25 @@ class Build:
         if p.arch != "x86":
             self.settings[p.cmake_toolchain_setting(m)] = "TRUE"
         self.settings["PLATFORM"] = p.get_platform(m)
+
         # somewhat misnamed now; sets test output to parsable xml:
+        # See sel4test/settings.cmake, if Sel4testAllowSettingsOverride is not
+        # set then BAMBOO controls the setting for LibSel4TestPrintXML
         self.settings["BAMBOO"] = "TRUE"
+
         self.files = p.image_names(m, self.image_base_name)
+
         if self.req == 'sim':
+            # See sel4test/settings.cmake, if Sel4testAllowSettingsOverride is
+            # bot set then SIMULATION controls the settings for
+            # Sel4testSimulation and Sel4testHaveCache.
             self.settings["SIMULATION"] = "TRUE"
 
-    def get_platform(self) -> Platform:
+    def get_platform(self) -> platforms.Platform:
         """Return the Platform object for this build definition."""
-        return platforms[self.platform]
+        return platforms.platforms[self.platform]
 
-    def get_mode(self) -> Optional[int]:
+    def get_mode(self) -> int:
         """Return the mode (32/64) for this build; taken from platform if not defined"""
         if not self.mode and self.get_platform().get_mode():
             return self.get_platform().get_mode()
@@ -159,7 +227,7 @@ class Build:
         return not self.is_clang()
 
     def can_mcs(self) -> bool:
-        return self.get_platform().name not in mcs_unsupported
+        return self.get_platform().name not in platforms.mcs_unsupported
 
     def set_mcs(self):
         if not self.can_mcs():
@@ -192,6 +260,8 @@ class Build:
         return self.settings.get('DOMAINS') is not None
 
     def validate(self):
+        if not self.image_base_name:
+            raise ValidationException("Build: no image base name")
         if not self.get_mode():
             raise ValidationException("Build: no unique mode")
         if not self.get_platform():
@@ -217,7 +287,7 @@ class Build:
     def is_disabled(self) -> bool:
         return self.no_hw_test or self.get_platform().no_hw_test
 
-    def get_req(self) -> List[str]:
+    def get_req(self) -> list[str]:
         req = self.req or self.get_platform().req
         if not req or req == []:
             return []
@@ -241,13 +311,13 @@ class Run:
     Build class. So far we only vary machine requirements (req) and name in a Run.
     """
 
-    def __init__(self, build: Build, suffix: Optional[str] = None,
-                 req: Optional[str] = None):
+    def __init__(self, build: Build, suffix: str = None,
+                 req: str = None):
         self.build = build
         self.name = build.name + suffix if suffix else build.name
         self.req = req
 
-    def get_req(self) -> List[str]:
+    def get_req(self) -> list[str]:
         return self.req or self.build.get_req()
 
     def hw_run(self, log):
@@ -347,14 +417,14 @@ boot_fail_patterns = [
 ]
 
 
-def repeat_on_boot_failure(log: Optional[List[str]]) -> int:
+def repeat_on_boot_failure(log: list[str]) -> int:
     """Try to repeat the test run if the board failed to boot."""
 
     if log:
         for pat in boot_fail_patterns:
             for i in range(len(log)+1-len(pat)):
                 if all(p in log[i+j] for j, p in enumerate(pat)):
-                    printc(ANSI_RED, "Boot failure detected.")
+                    AnsiPrinter.error("Boot failure detected.")
                     time.sleep(10)
                     return REPEAT, None
     else:
@@ -363,7 +433,7 @@ def repeat_on_boot_failure(log: Optional[List[str]]) -> int:
     return SUCCESS, None
 
 
-def release_mq_locks(runs: List[Union[Run, Build]]):
+def release_mq_locks(runs: list[Union[Run, Build]]):
     """Release locks from this job; runs the commands instead of returning a list."""
 
     def run(command):
@@ -404,7 +474,7 @@ def get_machine(req):
         return req[job_index % len(req)]
 
 
-def job_key():
+def job_key() -> str:
     return os.environ.get('GITHUB_REPOSITORY') + "-" + \
         os.environ.get('GITHUB_WORKFLOW') + "-" + \
         os.environ.get('GITHUB_RUN_ID') + "-" + \
@@ -414,15 +484,15 @@ def job_key():
 
 def mq_run(success_str: str,
            machine: str,
-           files: List[str],
+           files: list[str],
            retries: int = -1,
            lock_timeout: int = 8,
            completion_timeout: int = -1,
-           log: Optional[str] = None,
+           log: str = None,
            lock_held=False,
            keep_alive=False,
-           key: Optional[str] = None,
-           error_str: Optional[str] = None):
+           key: str = None,
+           error_str: str = None):
     """Machine queue mq.sh run command with arguments.
 
        Expects success marker, machine name, and boot image file(s).
@@ -451,48 +521,33 @@ def mq_run(success_str: str,
     return command
 
 
-def mq_lock(machine: str) -> List[str]:
+def mq_lock(machine: str) -> list[str]:
     """Get lock for a machine. Allow lock to be reclaimed after 30min."""
     return ['time', 'mq.sh', 'sem', '-wait', machine, '-k', job_key(), '-T', '1800']
 
 
-def mq_release(machine: str) -> List[str]:
+def mq_release(machine: str) -> list[str]:
     """Release lock on a machine."""
     return ['mq.sh', 'sem', '-signal', machine, '-k', job_key()]
 
 
-def mq_cancel(machine: str) -> List[str]:
+def mq_cancel(machine: str) -> list[str]:
     """Cancel processes waiting on lock for a machine."""
     return ['mq.sh', 'sem', '-cancel', machine, '-k', job_key()]
 
 
-def mq_print_lock(machine: str) -> List[str]:
+def mq_print_lock(machine: str) -> list[str]:
     """Print lock status for machine."""
     return ['mq.sh', 'sem', '-info', machine]
 
 
-# return codes for a test run or single step of a run
-FAILURE = 0
-SUCCESS = 1
-SKIP = 2
-REPEAT = 3
-
-
-def success_from_bool(success: bool) -> int:
-    if success:
-        return SUCCESS
-    else:
-        return FAILURE
-
-
-def run_cmd(cmd, run: Union[Run, Build], prev_output: Optional[str] = None) -> int:
-    """If the command is a List[str], echo + run command with arguments, otherwise
+def run_cmd(cmd, run: Union[Run, Build], prev_output: str = None) -> int:
+    """If the command is a list[str], echo + run command with arguments, otherwise
     expect a function, and run that function on the supplied Run plus outputs from
     previous command."""
 
     if isinstance(cmd, list):
-        printc(ANSI_YELLOW, "+++ " + " ".join(cmd))
-        sys.stdout.flush()
+        AnsiPrinter.command(cmd)
         # Print output as it arrives. Some of the build commands take too long to
         # wait until all output is there. Keep stderr separate, but flush it.
         process = subprocess.Popen(cmd, text=True, stdout=subprocess.PIPE,
@@ -504,18 +559,15 @@ def run_cmd(cmd, run: Union[Run, Build], prev_output: Optional[str] = None) -> i
             print(line)
             sys.stdout.flush()
             sys.stderr.flush()
-        ret = process.wait()
 
-        return success_from_bool(ret == 0), lines
+        ret_code = process.wait()
+        ret = SUCCESS if (0 == ret_code) else FAILURE
+        return ret, lines
     else:
         return cmd(run, prev_output)
 
 
-def printc(color: str, content: str):
-    print(color + content + ANSI_RESET)
-
-
-def summarise_junit(file_path: str) -> Tuple[int, List[str]]:
+def summarise_junit(file_path: str) -> tuple[int, list[str]]:
     """Parse jUnit output and show a summary.
 
     Returns True if there were no failures or errors, raises exception
@@ -524,24 +576,25 @@ def summarise_junit(file_path: str) -> Tuple[int, List[str]]:
     xml = JUnitXml.fromfile(file_path)
     succeeded = xml.tests - (xml.failures + xml.errors + xml.skipped)
     success = xml.failures == 0 and xml.errors == 0
+    ret = SUCCESS if success else FAILURE
+    col = AnsiPrinter.ANSI_GREEN if success else AnsiPrinter.ANSI_RED
 
-    col = ANSI_GREEN if success else ANSI_RED
-
-    printc(col, "Test summary")
-    printc(col, "------------")
-    printc(ANSI_GREEN if success else "", f"succeeded: {succeeded}/{xml.tests}")
+    AnsiPrinter.printc(col, "Test summary")
+    AnsiPrinter.printc(col, "------------")
+    AnsiPrinter.printc(AnsiPrinter.ANSI_GREEN if success else "",
+                       f"succeeded: {succeeded}/{xml.tests}")
     if xml.skipped > 0:
-        printc(ANSI_YELLOW, f"skipped:   {xml.skipped}")
+        AnsiPrinter.skip(f"skipped:   {xml.skipped}")
     if xml.failures > 0:
-        printc(ANSI_RED, f"failures:  {xml.failures}")
+        AnsiPrinter.error(f"failures:  {xml.failures}")
     if xml.errors > 0:
-        printc(ANSI_RED, f"errors:    {xml.errors}")
+        AnsiPrinter.error(f"errors:    {xml.errors}")
     print()
 
     failures = {str(case.name) for case in xml
                 if any([isinstance(r, Failure) or isinstance(r, Error) for r in case.result])}
 
-    return success_from_bool(success), list(failures)
+    return ret, list(failures)
 
 
 # where junit results are left after sanitising:
@@ -585,9 +638,7 @@ def run_build_script(manifest_dir: str,
     result = SKIP
     tries_left = 3
 
-    print(f"::group::{run.name}")
-    printc(ANSI_BOLD, f"-----------[ start test {run.name} ]-----------")
-    sys.stdout.flush()
+    AnsiPrinter.step_start("test", run.name)
 
     while tries_left > 0:
         tries_left -= 1
@@ -614,9 +665,9 @@ def run_build_script(manifest_dir: str,
                 break
 
         if result == FAILURE:
-            printc(ANSI_RED, ">>> command failed, aborting.")
+            AnsiPrinter.error(">>> command failed, aborting.")
         elif result == SKIP:
-            printc(ANSI_YELLOW, ">>> skipping this test.")
+            AnsiPrinter.skip(">>> skipping this test.")
 
         # run final script tasks even in case of failure, but not for SKIP
         if result != SKIP:
@@ -639,36 +690,32 @@ def run_build_script(manifest_dir: str,
             try:
                 result, failures = summarise_junit(junit_file)
             except IOError:
-                printc(ANSI_RED, f"Error reading {junit_file}")
+                AnsiPrinter.error(f"Error reading {junit_file}")
                 result = FAILURE
             except:
-                printc(ANSI_RED, f"Error parsing {junit_file}")
+                AnsiPrinter.error(f"Error parsing {junit_file}")
                 result = FAILURE
 
         if result == REPEAT and tries_left > 0:
-            printc(ANSI_YELLOW, ">>> command failed, repeating test.")
+            AnsiPrinter.warn(">>> command failed, repeating test.")
         elif result == REPEAT and tries_left == 0:
             result = FAILURE
-            printc(ANSI_RED, ">>> command failed, no tries left.")
+            AnsiPrinter.error(">>> command failed, no tries left.")
 
         if result != REPEAT:
             break
 
-    printc(ANSI_BOLD, f"-----------[ end test {run.name} ]-----------")
-    print("::endgroup::")
+    AnsiPrinter.step_end("test", run.name, result)
     # after group, so that it's easier to scan for failed jobs
-    if result == SUCCESS:
-        printc(ANSI_GREEN, f"{run.name} succeeded")
-    elif result == SKIP:
-        printc(ANSI_YELLOW, f"{run.name} skipped")
-    elif result == FAILURE:
-        printc(ANSI_RED, f"{run.name} FAILED")
+    if result == FAILURE:
         if failures != []:
             max_print = 10
-            printc(ANSI_RED, "Failed cases: " + ", ".join(failures[:max_print]) +
-                   (" ..." if len(failures) > max_print else ""))
+            AnsiPrinter.error("Failed cases: " + ", ".join(failures[:max_print]) +
+                              (" ..." if len(failures) > max_print else ""))
+    elif result in [SUCCESS, SKIP]:
+        pass  # AnsiPrinter.step_end(() has printed everything
     else:
-        printc(ANSI_RED, f"{run.name} with REPEAT at end of test, we should not see this.")
+        AnsiPrinter.error(f"{run.name} with REPEAT at end of test, we should not see this.")
     print("")
     sys.stdout.flush()
 
@@ -716,7 +763,7 @@ def build_for_platform(platform, default={}):
     return Build({platform: the_build})
 
 
-def build_for_variant(base_build: Build, variant, filter_fun=lambda x: True) -> Optional[Build]:
+def build_for_variant(base_build: Build, variant, filter_fun=lambda x: True) -> Build:
     """Make a build definition from a supplied base build and a build variant.
 
     Optionally takes a filter/validation function to reject specific build
@@ -731,11 +778,10 @@ def build_for_variant(base_build: Build, variant, filter_fun=lambda x: True) -> 
     build.name = build.name + "_" + variant_name(variant)
 
     mode = var_dict.get("mode") or build.get_mode()
-    if mode in build.get_platform().modes:
-        build.mode = mode
-    else:
+    if mode not in build.get_platform().modes:
         return None
 
+    build.mode = mode
     # build.mode is now unique, more settings could apply
     build.update_settings()
 
@@ -776,7 +822,7 @@ def build_for_variant(base_build: Build, variant, filter_fun=lambda x: True) -> 
 def get_env_filters() -> list:
     """Process input env variables and return a build filter (list of dict)"""
 
-    def get(var: str) -> Optional[str]:
+    def get(var: str) -> Union[str, None]:
         return os.environ.get('INPUT_' + var.upper())
 
     def to_list(string: str) -> list:
@@ -790,7 +836,7 @@ def get_env_filters() -> list:
     return [filter]
 
 
-def filtered(build: Build, build_filters: dict) -> Optional[Build]:
+def filtered(build: Build, build_filters: dict) -> Build:
     """Return build if build matches filter criteria, otherwise None."""
 
     def match_dict(build: Build, f):
@@ -858,8 +904,8 @@ def filtered(build: Build, build_filters: dict) -> Optional[Build]:
     return None
 
 
-def load_builds(file_name: Optional[str], filter_fun=lambda x: True,
-                yml: Optional[dict] = None) -> List[Build]:
+def load_builds(file_name: str, filter_fun=lambda x: True,
+                yml: dict = None) -> list[Build]:
     """Load a list of build definitions from yaml.
 
     Use provided yaml dict, or if None, load from file. One of file_name, yml
@@ -868,7 +914,7 @@ def load_builds(file_name: Optional[str], filter_fun=lambda x: True,
     Applies defaults, variants, and build-filter from the yaml file.
     Takes an optional filtering function for removing unwanted builds."""
 
-    yml = yml or load_yaml(file_name)
+    yml = yml or platforms.load_yaml(file_name)
 
     default_build = yml.get("default", {})
     build_filters = yml.get("build-filter", [])
@@ -877,7 +923,7 @@ def load_builds(file_name: Optional[str], filter_fun=lambda x: True,
     yml_builds = yml.get("builds", [])
 
     if yml_builds == []:
-        base_builds = [build_for_platform(p, default_build) for p in platforms.keys()]
+        base_builds = [build_for_platform(p, default_build) for p in platforms.platforms.keys()]
     else:
         base_builds = [Build(b, default_build) for b in yml_builds]
 
@@ -917,12 +963,13 @@ def run_builds(builds: list, run_fun) -> int:
         results[run_fun(manifest_dir, build)].append(build.name)
 
     no_failures = results[FAILURE] == []
-    printc(ANSI_GREEN if no_failures else "", "Successful tests: " + ", ".join(results[SUCCESS]))
+    AnsiPrinter.printc(AnsiPrinter.ANSI_GREEN if no_failures else "",
+                       "Successful tests: " + ", ".join(results[SUCCESS]))
     if results[SKIP] != []:
         print()
-        printc(ANSI_YELLOW, "SKIPPED tests: " + ", ".join(results[SKIP]))
+        AnsiPrinter.skip("SKIPPED tests: " + ", ".join(results[SKIP]))
     if results[FAILURE] != []:
         print()
-        printc(ANSI_RED, "FAILED tests: " + ", ".join(results[FAILURE]))
+        AnsiPrinter.error("FAILED tests: " + ", ".join(results[FAILURE]))
 
     return 0 if no_failures else 1
